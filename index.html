@@ -178,7 +178,7 @@ function playPlin() {
 
     // ========= IMÁGENES (opcionales) ===========
     const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null };
-    function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.src=src; }); }
+    function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.onerror = () => res(null); im.src=src; }); }
     async function loadAll() {
       IMG.bg1 = await loadImage(ASSETS.bg1);
       IMG.bg2 = await loadImage(ASSETS.bg2);
@@ -428,10 +428,12 @@ function playPlin() {
     }
 
     // Arranque
-    loadAll().then(() => {
-      reset();
-      requestAnimationFrame(frame);
-    });
+    let started = false;
+function start(){ if (started) return; started = true; reset(); requestAnimationFrame(frame); }
+
+loadAll().then(start);
+// Si alguna imagen queda colgada, arrancamos igual
+setTimeout(start, 2500);
 
   })();
   </script>
