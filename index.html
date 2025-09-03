@@ -181,7 +181,7 @@ function playPlin() {
     function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
     // ========= IMÁGENES (opcionales) ===========
-    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null };
+    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null };
     function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.onerror = () => res(null); im.src=src; }); }
     async function loadAll() {
       IMG.bg1 = await loadImage(ASSETS.bg1);
@@ -214,7 +214,7 @@ function playPlin() {
       CHARGE.value = 0; CHARGE.cooldown = 0;
       SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
       obstacles.length = 0; bananas.length = 0; pulses.length = 0;
-      player.x = 160; player.y = WORLD.h*0.5; player.state='calmado';
+      player.x = 160; player.y = WORLD.h - 160; player.state='calmado';
       dead = false;
       panel.classList.remove('show');
       hint.style.display = '';
