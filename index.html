@@ -111,20 +111,21 @@ function playPlin() {
 
     // ======== CONFIG DE ASSETS (opcional) =========
     // Deja "" para usar formas. Si subes imágenes a /assets, pon las rutas aquí:
-    const ASSETS = {
-      bg1: "assets/fondo_calc.png",       // ej: "assets/fondo1.png"
-      bg2: "assets/fondo_desierto.png",       // ej: "assets/fondo2.png"
-      erizo: {       // puedes usar una sola imagen o 3 estados
-        calmado: "assets/calmado.png", // "assets/erizo_calmado.png"
-        inhalando: "assets/respirando.png",
-        gritando: "assets/gritand.png"
-      },
-      obstaculos: [  // añade/quita rutas
-        "assets/paraguas_1",          // "assets/paraguas.png"
-        "assets/helado_meditando.png"           // "assets/cono.png"
-      ],
-      banana: "assets/plátano_puntos.png"     // "assets/platano.png"
-    };
+   const ASSETS = {
+  bg1: "assets/fondo_calc.png",
+  bg2: "assets/fondo_desierto.png",
+  erizo: {
+    calmado:   "assets/calmado.png",
+    inhalando: "assets/respirando.png",
+    gritando:  "assets/gritando.png"
+  },
+  obstaculos: [
+    "assets/paraguas.png",
+    "assets/helado_meditando.png"
+  ],
+  banana: "assets/platano_puntos.png",
+  suelo: "assets/suelo.png"
+};
 
     // ========= SETUP CANVAS Y ESCALA ===========
     const canvas = document.getElementById('game');
@@ -163,10 +164,13 @@ function playPlin() {
     });
 
     // ========= ENTIDADES ===========
-    const player = { x: 160, y: WORLD.h*0.5, r: 34, state: 'calmado' };
+    const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado' };
     const backgrounds = [
       { x: 0 }, { x: WORLD.w }
     ];
+    const sueloScroll = [
+  { x: 0 }, { x: WORLD.w }
+];
     const obstacles = []; // {x,y,r,speed}
     const bananas = [];   // {x,y,r,speed}
     const pulses  = [];   // {x,y,rad,life}
@@ -187,6 +191,7 @@ function playPlin() {
       IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
       for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
       IMG.banana = await loadImage(ASSETS.banana);
+      IMG.suelo = await loadImage(ASSETS.suelo);
     }
 
     // ========= GAME LOOP ===========
@@ -224,6 +229,11 @@ function playPlin() {
         bg.x -= SPEED.scroll * dt;
         if (bg.x <= -WORLD.w) bg.x += WORLD.w*2;
       }
+      // Suelo (scroll en bucle)
+for (let s of sueloScroll) {
+  s.x -= SPEED.scroll * dt;
+  if (s.x <= -WORLD.w) s.x += WORLD.w * 2;
+}
 
       // Spawner y dificultad
       SPAWN.timer += dt;
@@ -386,6 +396,17 @@ function playPlin() {
         ctx.lineWidth = 6;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2); ctx.stroke();
       }
+      // Suelo
+for (let s of sueloScroll) {
+  if (IMG.suelo) {
+    const h = 120; // altura visible del suelo
+    ctx.drawImage(IMG.suelo, s.x, WORLD.h - h, WORLD.w, h);
+  } else {
+    // versión de emergencia: suelo verde
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(s.x, WORLD.h - 120, WORLD.w, 120);
+  }
+}
 
       // Erizo
       const erizoImg =
