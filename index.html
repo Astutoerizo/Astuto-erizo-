@@ -68,6 +68,47 @@
     const PULSE  = { base:120, max:380, life:0.25 };
     const POINTS = { total:0 };
 
+    // ========= SONIDOS (WebAudio sin archivos) ==========
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playInhalar() {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1);
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 1);
+}
+
+function playGrito() {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.3);
+}
+
+function playPlin() {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.15);
+}
+
     // ======== CONFIG DE ASSETS (opcional) =========
     // Deja "" para usar formas. Si subes imágenes a /assets, pon las rutas aquí:
     const ASSETS = {
@@ -198,6 +239,7 @@
       if (isDown && CHARGE.cooldown <= 0) {
         CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
         player.state = 'inhalando';
+        if (Math.random() < 0.02) playInhalar(); // pequeños whooshes
       }
 
       // Soltar → pulso
@@ -218,6 +260,7 @@
             CHARGE.cooldown = CHARGE.cooldownBase;
             CHARGE.value = 0;
             player.state = 'gritando';
+            playGrito();
           }
         }
       }
@@ -274,6 +317,7 @@
         if (dist2(b.x,b.y,player.x,player.y) <= (b.r+player.r)*(b.r+player.r)) {
           bananas.splice(i,1);
           POINTS.total += 1;
+          playPlin();
         }
       }
 
