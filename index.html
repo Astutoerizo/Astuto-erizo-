@@ -14,7 +14,7 @@
       display:flex; align-items:center; gap:12px; justify-content:space-between;
       font-weight:600;
     }
-    .bar { flex:1; height:14px; background:#3a3a44; border-radius:999px; overflow:hidden; }
+    .bar { flex:1; height:14px; background:#3a3a44; border-radius:999px; overflow:hidden; border:2px solid #6ee7b7; box-shadow:0 0 6px rgba(110,231,183,0.6) inset; }
     .fill { height:100%; width:0%; background:#86efac; transition: width .08s linear; }
     .cooldown { opacity:.45; }
     .score { min-width:120px; text-align:right; }
@@ -291,6 +291,7 @@
       if (isDown && CHARGE.cooldown <= 0) {
         player.state = 'inhalando';
         player.vy += PHYSICS.inhaleForce * dt;
+        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); // 🔥 suma carga
         if (Math.random() < 0.02) playInhalar();
       } else {
         player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
