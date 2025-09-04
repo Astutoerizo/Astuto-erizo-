@@ -155,7 +155,7 @@
     const panelMsg = document.getElementById('panelMsg');
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
-    const PHYSICS = { gravity: 600, inhaleForce: -420, maxVy: 500 };
+    const PHYSICS = { gravity: 600, inhaleForce: -650, maxVy: 500 };
     const GROUND_H = 180;
 
     let scale = 1, offsetX = 0, offsetY = 0;
@@ -294,6 +294,8 @@
         player.vy += PHYSICS.inhaleForce * dt;
         CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); // 🔥 suma carga
         if (Math.random() < 0.02) playInhalar();
+         player.vy *= 0.95; // amortigua la caída
+  player.y += Math.sin(performance.now() / 200) * 0.6; // pequeño balanceo
       } else {
         player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
       }
@@ -465,7 +467,7 @@ if (player.state === 'mareado') {
       const t = performance.now() / 300;
       let scale = 1;
       if (player.state === 'calmado') scale = 1 + 0.02 * Math.sin(t);
-      else if (player.state === 'inhalando') scale = 1.2;
+      else if (player.state === 'inhalando') scale = 1.3;
       else if (player.state === 'gritando') scale = 0.9;
      if (erizoImg) {
   const s = 80 * scale; // tamaño destino
