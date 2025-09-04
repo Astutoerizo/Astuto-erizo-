@@ -190,6 +190,7 @@
     const obstacles = [];
     const bananas = [];
     const pulses  = [];
+    const particles = []; // {x, y, vx, vy, life}
 
     // ======== UTIL =========
     const rand = (a,b) => a + Math.random()*(b-a);
@@ -326,6 +327,25 @@ if (CHARGE.cooldown > 0) {
 if (!isDown && CHARGE.cooldown === 0) {
   player.state = 'calmado';
 }
+      // Partículas zen
+if (Math.random() < 0.1) { // probabilidad de spawn cada frame
+  particles.push({
+    x: player.x + rand(-20, 20),
+    y: player.y + rand(-20, 20),
+    vx: rand(-15, 15),
+    vy: rand(-30, -10),
+    life: 1.0
+  });
+}
+
+// Actualizar partículas
+for (let i = particles.length - 1; i >= 0; i--) {
+  const p = particles[i];
+  p.x += p.vx * dt;
+  p.y += p.vy * dt;
+  p.life -= dt * 0.5;
+  if (p.life <= 0) particles.splice(i, 1);
+}
       for (let i = pulses.length-1; i>=0; i--) {
         const p = pulses[i]; p.life -= dt;
         if (p.life <= 0) { pulses.splice(i,1); continue; }
@@ -398,6 +418,14 @@ if (!isDown && CHARGE.cooldown === 0) {
         if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
         else { ctx.fillStyle='#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); }
       }
+      // Partículas zen
+for (const p of particles) {
+  const alpha = Math.max(0, p.life);
+  ctx.fillStyle = `rgba(255, ${200 + Math.floor(55 * Math.random())}, 255, ${alpha})`; 
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+  ctx.fill();
+}
         // Aura zen (debajo del erizo)
   const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300); // efecto latido
   ctx.fillStyle = `rgba(255,255,255,${0.25 * pulse})`;
