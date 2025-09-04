@@ -254,7 +254,18 @@ for (let s of sueloScroll) {
   s.x -= SPEED.scroll * dt;
   if (s.x <= -WORLD.w) s.x += WORLD.w * 2;
 }
-
+// Nubes: movimiento lateral con parallax
+for (const c of CLOUD.list) {
+  c.x -= c.speed * dt * 0.3; // se mueven lento
+  if (c.x + c.w < 0) {
+    // reaparece por la derecha
+    c.x = WORLD.w + rand(10, 100);
+    c.y = rand(50, WORLD.h/2);
+    c.w = rand(80, 180);
+    c.h = rand(50, 100);
+    c.img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
+  }
+}
       // Spawner y dificultad
       SPAWN.timer += dt;
       SPAWN.diffTimer += dt;
