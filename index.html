@@ -185,7 +185,7 @@
     });
 
     // ======== ENTIDADES =========
-    const player = { x: 160, y: WORLD.h - GROUND_H - 34, r: 34, state: 'calmado', vy: 0 };
+    const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0, mareo: 0 };
     const sueloScroll = [ { x: 0 }, { x: WORLD.w } ];
     const obstacles = [];
     const bananas = [];
@@ -317,6 +317,17 @@
           }
         }
       }
+      // Acumular mareo al gritar
+if (player.state === 'gritando') {
+  player.mareo += dt;
+  if (player.mareo > 3) { // si grita más de 3 seg seguidos
+    player.state = 'mareado';
+    player.mareo = 0;
+  }
+} else {
+  // se recupera lentamente si no grita
+  if (player.mareo > 0) player.mareo -= dt * 0.5;
+}
      // Cooldown y estado del erizo
 if (CHARGE.cooldown > 0) {
   CHARGE.cooldown -= dt;
@@ -432,18 +443,54 @@ for (const p of particles) {
   ctx.beginPath();
   ctx.arc(player.x, player.y, 60, 0, Math.PI*2); // círculo alrededor del erizo
   ctx.fill();
-      const erizoImg =
-        (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
-        (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
-        IMG.erizo.calmado;
+     const erizoImg =
+  (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
+  (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
+  IMG.erizo.calmado;
+
+// Si está mareado → giramos el sprite y le ponemos “estrellitas”
+if (player.state === 'mareado') {
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(Math.sin(performance.now()/200) * 0.3); // cabeceo
+  ctx.drawImage(erizoImg, -40, -40, 80, 80);
+  ctx.restore();
+
+  // Estrellitas
+  ctx.fillStyle = 'yellow';
+  ctx.beginPath(); ctx.arc(player.x-20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(player.x+20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
+  return; // saltamos el resto para no dibujar encima
+}
       const t = performance.now() / 300;
       let scale = 1;
       if (player.state === 'calmado') scale = 1 + 0.02 * Math.sin(t);
       else if (player.state === 'inhalando') scale = 1.2;
       else if (player.state === 'gritando') scale = 0.9;
-      if (erizoImg) {
-        const s = 110 * scale;
-        ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
+     if (erizoImg) {
+  const s = 80 * scale; // tamaño destino
+  ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
+
+  // Patitas/brazos (detalles simples)
+  const t2 = performance.now() / 200;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+
+  // Brazos
+  ctx.beginPath();
+  ctx.moveTo(player.x - s*0.3, player.y);
+  ctx.lineTo(player.x - s*0.3 - 6*Math.sin(t2), player.y + 10);
+  ctx.moveTo(player.x + s*0.3, player.y);
+  ctx.lineTo(player.x + s*0.3 + 6*Math.sin(t2), player.y + 10);
+  ctx.stroke();
+
+  // Patitas
+  ctx.beginPath();
+  ctx.moveTo(player.x - s*0.2, player.y + s*0.4);
+  ctx.lineTo(player.x - s*0.2, player.y + s*0.4 + 6*Math.cos(t2));
+  ctx.moveTo(player.x + s*0.2, player.y + s*0.4);
+  ctx.lineTo(player.x + s*0.2, player.y + s*0.4 + 6*Math.cos(t2));
+  ctx.stroke();
       } else {
         ctx.fillStyle='#8b5cf6'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
       }
