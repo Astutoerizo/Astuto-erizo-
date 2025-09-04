@@ -398,6 +398,12 @@ if (!isDown && CHARGE.cooldown === 0) {
         if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
         else { ctx.fillStyle='#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); }
       }
+        // Aura zen (debajo del erizo)
+  const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300); // efecto latido
+  ctx.fillStyle = `rgba(255,255,255,${0.25 * pulse})`;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 60, 0, Math.PI*2); // círculo alrededor del erizo
+  ctx.fill();
       const erizoImg =
         (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
         (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
