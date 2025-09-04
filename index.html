@@ -186,7 +186,7 @@ function playPlin() {
     function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
     // ========= IMÁGENES (opcionales) ===========
-    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null };
+    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, nubes:[] };
     function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.onerror = () => res(null); im.src=src; }); }
    async function loadAll() {
   IMG.bg1 = await loadImage(ASSETS.bg1);
