@@ -237,14 +237,14 @@
 
     function spawnObstacle() {
       const y = rand(240, WORLD.h-180);
-      const r = rand(26, 44);
+      const r = rand(44, 70);
       const speed = Math.min(SPEED.scroll + rand(0,60), SPEED.max);
       obstacles.push({ x: WORLD.w + 60, y, r, speed, kind: Math.floor(rand(0, IMG.obstaculos.length)) });
       if (chance(0.30)) {
-        bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 16, speed: speed+40, kind: 'banana' });
+        bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 24, speed: speed+40, kind: 'banana' });
       }
       if (chance(0.10)) {
-        bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h-200), r: 24, speed: speed+20, kind: 'cuenco' });
+        bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h-200), r: 32, speed: speed+20, kind: 'cuenco' });
       }
     }
 
@@ -253,7 +253,7 @@
       CHARGE.value = 0; CHARGE.cooldown = 0;
       SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
       obstacles.length = 0; bananas.length = 0; pulses.length = 0;
-      player.x = 160; player.y = WORLD.h - GROUND_H - player.r; player.state='calmado';
+      player.y = WORLD.h - GROUND_H - player.r + 20; player.state='calmado';
       dead = false;
       panel.classList.remove('show');
       hint.style.display = '';
@@ -315,8 +315,16 @@
           }
         }
       }
-      if (CHARGE.cooldown > 0) { CHARGE.cooldown -= dt; if (CHARGE.cooldown < 0) CHARGE.cooldown = 0; }
-      if (!isDown && CHARGE.cooldown === 0 && player.state !== 'gritando') { player.state = 'calmado'; }
+     // Cooldown y estado del erizo
+if (CHARGE.cooldown > 0) {
+  CHARGE.cooldown -= dt;
+  if (CHARGE.cooldown < 0) CHARGE.cooldown = 0;
+}
+
+// Si no estamos pulsando y ya no hay cooldown, vuelve a calmado siempre
+if (!isDown && CHARGE.cooldown === 0) {
+  player.state = 'calmado';
+}
       for (let i = pulses.length-1; i>=0; i--) {
         const p = pulses[i]; p.life -= dt;
         if (p.life <= 0) { pulses.splice(i,1); continue; }
@@ -399,7 +407,7 @@
       else if (player.state === 'inhalando') scale = 1.2;
       else if (player.state === 'gritando') scale = 0.9;
       if (erizoImg) {
-        const s = 80 * scale;
+        const s = 110 * scale;
         ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
       } else {
         ctx.fillStyle='#8b5cf6'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
