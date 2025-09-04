@@ -143,7 +143,7 @@ function playPlin() {
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
     const PHYSICS = { gravity: 600, inhaleForce: -420, maxVy: 500 };
-    const GROUND_H = 120; // altura visible del suelo (en px)
+    const GROUND_H = 180; // altura visible del suelo (en px)
 
     let scale = 1, offsetX = 0, offsetY = 0;
     function fit() {
@@ -238,7 +238,7 @@ function initClouds() {
       CHARGE.value = 0; CHARGE.cooldown = 0;
       SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
       obstacles.length = 0; bananas.length = 0; pulses.length = 0;
-      player.x = 160; player.y = WORLD.h - GROUND_H - player.r; player.state='calmado';
+      player.x = 160; player.y = WORLD.h - GROUND_H - player.r/2; player.state='calmado';
       dead = false;
       panel.classList.remove('show');
       hint.style.display = '';
