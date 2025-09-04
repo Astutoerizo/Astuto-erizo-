@@ -60,80 +60,93 @@
 
   <script>
   (() => {
-    // ======== CONFIG GENERAL (ajusta aquí) =========
-    const WORLD = { w: 540, h: 960 }; // 9:16
+    // ======== CONFIG GENERAL =========
+    const WORLD = { w: 540, h: 960 };
     const SPEED = { scroll: 280, inc: 20, max: 520 };
     const SPAWN = { interval: 1.2, min: 0.7, timer: 0, diffTimer: 0 };
     const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
     const PULSE  = { base:120, max:380, life:0.25 };
     const POINTS = { total:0 };
 
-    // ========= SONIDOS (WebAudio sin archivos) ==========
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // ======== SONIDOS =========
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-function playInhalar() {
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1);
-  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 1);
-}
+    function playInhalar() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 1);
+    }
 
-function playGrito() {
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = "square";
-  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
-  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.3);
-}
+    function playGrito() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    }
 
-function playPlin() {
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = "triangle";
-  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.15);
-  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.15);
-}
+    function playPlin() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    }
 
-    // ======== CONFIG DE ASSETS (opcional) =========
-    // Deja "" para usar formas. Si subes imágenes a /assets, pon las rutas aquí:
-   const ASSETS = {
-  bg1: "assets/fondo_calc.png",
-  bg2: "assets/fondo_desierto.png",
-  erizo: {
-    calmado:   "assets/calmado.png",
-    inhalando: "assets/respirando.png",
-    gritando:  "assets/gritando.png"
-  },
-  obstaculos: [
-    "assets/paraguas.png",
-    "assets/helado_meditando.png"
-  ],
-  banana: "assets/platano_puntos.png",
-  suelo: "assets/suelo.png",
-     nubes: [
-    "assets/nubes/nube1.png",
-    "assets/nubes/nube2.png",
-    "assets/nubes/nube3.png",
-    "assets/nubes/nube4.png"
-  ]
-};
+    function playGong() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 2);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 2);
+    }
 
-    // ========= SETUP CANVAS Y ESCALA ===========
+    // ======== ASSETS =========
+    const ASSETS = {
+      bg1: "assets/fondo_calc.png",
+      bg2: "assets/fondo_desierto.png",
+      erizo: {
+        calmado:   "assets/calmado.png",
+        inhalando:"assets/respirando.png",
+        gritando: "assets/gritando.png"
+      },
+      obstaculos: [
+        "assets/paraguas.png",
+        "assets/helado_meditando.png"
+      ],
+      banana: "assets/platano_puntos.png",
+      suelo: "assets/suelo.png",
+      cuenco: "assets/cuenco_tibetano.png",
+      nubes: [
+        "assets/nubes/nube1.png",
+        "assets/nubes/nube2.png",
+        "assets/nubes/nube3.png",
+        "assets/nubes/nube4.png"
+      ]
+    };
+
+    // ======== CANVAS =========
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const zenFill = document.getElementById('zenFill');
@@ -143,7 +156,7 @@ function playPlin() {
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
     const PHYSICS = { gravity: 600, inhaleForce: -420, maxVy: 500 };
-    const GROUND_H = 180; // altura visible del suelo (en px)
+    const GROUND_H = 180;
 
     let scale = 1, offsetX = 0, offsetY = 0;
     function fit() {
@@ -155,7 +168,7 @@ function playPlin() {
     }
     window.addEventListener('resize', fit); fit();
 
-    // ========= INPUT ===========
+    // ======== INPUT =========
     let isDown = false, justReleased = false;
     function withinCanvas(clientX, clientY){
       const x = (clientX - offsetX) / scale, y = (clientY - offsetY) / scale;
@@ -171,54 +184,54 @@ function playPlin() {
       isDown = false; justReleased = true; e.preventDefault();
     });
 
-    // ========= ENTIDADES ===========
-    const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0 };
-    const sueloScroll = [
-  { x: 0 }, { x: WORLD.w }
-];
-    const obstacles = []; // {x,y,r,speed}
-    const bananas = [];   // {x,y,r,speed}
-    const pulses  = [];   // {x,y,rad,life}
+    // ======== ENTIDADES =========
+    const player = { x: 160, y: WORLD.h - GROUND_H - 34, r: 34, state: 'calmado', vy: 0 };
+    const sueloScroll = [ { x: 0 }, { x: WORLD.w } ];
+    const obstacles = [];
+    const bananas = [];
+    const pulses  = [];
 
-    // ========= UTIL ===========
+    // ======== UTIL =========
     const rand = (a,b) => a + Math.random()*(b-a);
     const chance = (p) => Math.random() < p;
     function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
-    // ========= IMÁGENES (opcionales) ===========
-    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, nubes:[] };
+    // ======== IMÁGENES =========
+    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[] };
     function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.onerror = () => res(null); im.src=src; }); }
-   async function loadAll() {
-  IMG.bg1 = await loadImage(ASSETS.bg1);
-  IMG.bg2 = await loadImage(ASSETS.bg2);
-  IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
-  IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
-  IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
-  for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
-  IMG.banana = await loadImage(ASSETS.banana);
-  IMG.suelo = await loadImage(ASSETS.suelo);
-  for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
-}
-// Nubes (parallax)
-const CLOUD = { list: [] };
+    async function loadAll() {
+      IMG.bg1 = await loadImage(ASSETS.bg1);
+      IMG.bg2 = await loadImage(ASSETS.bg2);
+      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
+      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
+      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
+      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
+      IMG.banana = await loadImage(ASSETS.banana);
+      IMG.suelo = await loadImage(ASSETS.suelo);
+      IMG.cuenco = await loadImage(ASSETS.cuenco);
+      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
+    }
 
-function initClouds() {
-  CLOUD.list = [];
-  for (let i = 0; i < 10; i++) {
-    const band = Math.floor(rand(0,3)); // 0=fondo, 1=medio, 2=frente
-    const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
-    CLOUD.list.push({
-      x: rand(0, WORLD.w),
-      y: rand(50, WORLD.h/2),
-      w: rand(80, 180),
-      h: rand(50, 100),
-      speed: 20 + band * 40, // más cerca → más rápido
-      band,
-      img
-    });
-  }
-}
-    // ========= GAME LOOP ===========
+    // ======== NUBES =========
+    const CLOUD = { list: [] };
+    function initClouds() {
+      CLOUD.list = [];
+      for (let i = 0; i < 10; i++) {
+        const band = Math.floor(rand(0,3));
+        const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
+        CLOUD.list.push({
+          x: rand(0, WORLD.w),
+          y: rand(50, WORLD.h/2),
+          w: rand(80, 180),
+          h: rand(50, 100),
+          speed: 20 + band * 40,
+          band,
+          img
+        });
+      }
+    }
+
+    // ======== GAME LOOP =========
     let last = performance.now();
     let dead = false;
 
@@ -227,9 +240,11 @@ function initClouds() {
       const r = rand(26, 44);
       const speed = Math.min(SPEED.scroll + rand(0,60), SPEED.max);
       obstacles.push({ x: WORLD.w + 60, y, r, speed, kind: Math.floor(rand(0, IMG.obstaculos.length)) });
-      // 30% banana
       if (chance(0.30)) {
-        bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 16, speed: speed+40 });
+        bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 16, speed: speed+40, kind: 'banana' });
+      }
+      if (chance(0.10)) {
+        bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h-200), r: 24, speed: speed+20, kind: 'cuenco' });
       }
     }
 
@@ -238,7 +253,7 @@ function initClouds() {
       CHARGE.value = 0; CHARGE.cooldown = 0;
       SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
       obstacles.length = 0; bananas.length = 0; pulses.length = 0;
-      player.x = 160; player.y = WORLD.h - GROUND_H - player.r/2; player.state='calmado';
+      player.x = 160; player.y = WORLD.h - GROUND_H - player.r; player.state='calmado';
       dead = false;
       panel.classList.remove('show');
       hint.style.display = '';
@@ -246,124 +261,78 @@ function initClouds() {
     }
 
     btnRestart.addEventListener('click', reset);
-    window.addEventListener('keydown', (e)=>{ if (e.key === 'r') reset(); });
 
     function update(dt) {
-      // Suelo (scroll en bucle)
-for (let s of sueloScroll) {
-  s.x -= SPEED.scroll * dt;
-  if (s.x <= -WORLD.w) s.x += WORLD.w * 2;
-}
-// Nubes: movimiento lateral con parallax
-for (const c of CLOUD.list) {
-  c.x -= c.speed * dt * 0.3; // se mueven lento
-  if (c.x + c.w < 0) {
-    // reaparece por la derecha
-    c.x = WORLD.w + rand(10, 100);
-    c.y = rand(50, WORLD.h/2);
-    c.w = rand(80, 180);
-    c.h = rand(50, 100);
-    c.img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
-  }
-}
-      // Spawner y dificultad
-      SPAWN.timer += dt;
-      SPAWN.diffTimer += dt;
+      // Suelo
+      for (let s of sueloScroll) {
+        s.x -= SPEED.scroll * dt;
+        if (s.x <= -WORLD.w) s.x += WORLD.w * 2;
+      }
+      // Nubes
+      for (const c of CLOUD.list) {
+        c.x -= c.speed * dt;
+        if (c.x + c.w < 0) {
+          c.x = WORLD.w + rand(10, 100);
+          c.y = rand(50, WORLD.h/2);
+          c.w = rand(80, 180);
+          c.h = rand(50, 100);
+          c.img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
+        }
+      }
+      // Spawner
+      SPAWN.timer += dt; SPAWN.diffTimer += dt;
       if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; spawnObstacle(); }
       if (SPAWN.diffTimer >= 10) {
         SPAWN.diffTimer = 0;
         SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max);
         SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05);
       }
-
-      // Input + física del erizo
-if (isDown && CHARGE.cooldown <= 0) {
-  player.state = 'inhalando';
-  player.vy += PHYSICS.inhaleForce * dt; // fuerza hacia arriba
-  if (Math.random() < 0.02) playInhalar();
-} else {
-  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
-}
-
-// Aplicar gravedad
-player.vy += PHYSICS.gravity * dt;
-if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
-
-// Mover
-player.y += player.vy * dt;
-
-// Limitar al suelo
-// Limitar al suelo
-const sueloTop = WORLD.h - GROUND_H - player.r;
-if (player.y > sueloTop) {
-  player.y = sueloTop;
-  player.vy = 0;
-}
-if (player.y < 80) { // techo límite
-  player.y = 80;
-  player.vy = 0;
-}
-
-      // Soltar → pulso
+      // Input + física
+      if (isDown && CHARGE.cooldown <= 0) {
+        player.state = 'inhalando';
+        player.vy += PHYSICS.inhaleForce * dt;
+        if (Math.random() < 0.02) playInhalar();
+      } else {
+        player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
+      }
+      player.vy += PHYSICS.gravity * dt;
+      if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
+      player.y += player.vy * dt;
+      const sueloTop = WORLD.h - GROUND_H - player.r;
+      if (player.y > sueloTop) { player.y = sueloTop; player.vy = 0; }
+      if (player.y < 80) { player.y = 80; player.vy = 0; }
       if (justReleased) {
         justReleased = false;
         if (CHARGE.cooldown <= 0) {
           if (CHARGE.value >= CHARGE.over) {
-            // Sobrecarga: mini castigo
-            CHARGE.cooldown = 0.7;
-            CHARGE.value = 0;
-            player.state = 'gritando';
-            // pequeño “fail” visual (sin sonido de momento)
+            CHARGE.cooldown = 0.7; CHARGE.value = 0; player.state = 'gritando';
           } else {
-            // Pulso válido
             const t = CHARGE.value / CHARGE.max;
             const rad = PULSE.base + t * (PULSE.max - PULSE.base);
             pulses.push({ x: player.x+40, y: player.y, rad, life: PULSE.life });
             CHARGE.cooldown = CHARGE.cooldownBase;
-            CHARGE.value = 0;
-            player.state = 'gritando';
-            playGrito();
+            CHARGE.value = 0; player.state = 'gritando'; playGrito();
           }
         }
       }
-
-      // Cooldown y estado del erizo
-      if (CHARGE.cooldown > 0) {
-        CHARGE.cooldown -= dt;
-        if (CHARGE.cooldown < 0) CHARGE.cooldown = 0;
-      }
-      if (!isDown && CHARGE.cooldown === 0 && player.state !== 'gritando') {
-        player.state = 'calmado';
-      }
-
-      // Pulsos (colisiones con obstáculos)
+      if (CHARGE.cooldown > 0) { CHARGE.cooldown -= dt; if (CHARGE.cooldown < 0) CHARGE.cooldown = 0; }
+      if (!isDown && CHARGE.cooldown === 0 && player.state !== 'gritando') { player.state = 'calmado'; }
       for (let i = pulses.length-1; i>=0; i--) {
-        const p = pulses[i];
-        p.life -= dt;
+        const p = pulses[i]; p.life -= dt;
         if (p.life <= 0) { pulses.splice(i,1); continue; }
-        // Colisión con cada obstáculo
         for (let j = obstacles.length-1; j>=0; j--) {
           const o = obstacles[j];
           if (dist2(p.x,p.y,o.x,o.y) <= (p.rad+o.r)*(p.rad+o.r)) {
-            obstacles.splice(j,1);
-            POINTS.total += 2;
+            obstacles.splice(j,1); POINTS.total += 2;
           }
         }
       }
-
-      // Mover obstáculos y bananas
       for (let i = obstacles.length-1; i>=0; i--) {
-        const o = obstacles[i];
-        o.x -= o.speed * dt;
-        if (o.x < -120) obstacles.splice(i,1);
+        const o = obstacles[i]; o.x -= o.speed * dt; if (o.x < -120) obstacles.splice(i,1);
       }
       for (let i = bananas.length-1; i>=0; i--) {
-        const b = bananas[i];
-        b.x -= b.speed * dt;
-        if (b.x < -120) bananas.splice(i,1);
+        const b = bananas[i]; b.x -= b.speed * dt; if (b.x < -120) bananas.splice(i,1);
       }
-
-      // Colisiones con el erizo
       for (let i = obstacles.length-1; i>=0; i--) {
         const o = obstacles[i];
         if (dist2(o.x,o.y,player.x,player.y) <= (o.r+player.r)*(o.r+player.r)) {
@@ -378,118 +347,64 @@ if (player.y < 80) { // techo límite
         const b = bananas[i];
         if (dist2(b.x,b.y,player.x,player.y) <= (b.r+player.r)*(b.r+player.r)) {
           bananas.splice(i,1);
-          POINTS.total += 1;
-          playPlin();
+          if (b.kind === 'cuenco') { POINTS.total += 5; playGong(); }
+          else { POINTS.total += 1; playPlin(); }
         }
       }
-
-      // UI
       scoreEl.textContent = "Puntos: " + POINTS.total;
-      const fillPct = (CHARGE.value / CHARGE.max) * 100;
-      zenFill.style.width = fillPct + "%";
+      zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
       zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
     }
 
-  function draw() {
-  // Fondo estático
-  ctx.clearRect(0,0,WORLD.w,WORLD.h);
-  if (IMG.bg1) {
-    ctx.drawImage(IMG.bg1, 0, 0, WORLD.w, WORLD.h);
-  } else {
-    // fallback si no hay imagen
-    ctx.fillStyle = '#bae6fd';
-    ctx.fillRect(0, 0, WORLD.w, WORLD.h);
-  }
-
-  // Nubes (parallax: fondo → medio → frente)
-  for (let pass = 0; pass < 3; pass++){
-    for (const c of CLOUD.list){
-      if (c.band !== pass) continue;
-      if (c.img) {
-        ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
+    function draw() {
+      ctx.clearRect(0,0,WORLD.w,WORLD.h);
+      if (IMG.bg1) ctx.drawImage(IMG.bg1, 0, 0, WORLD.w, WORLD.h);
+      else { ctx.fillStyle = '#bae6fd'; ctx.fillRect(0,0,WORLD.w,WORLD.h); }
+      for (let pass = 0; pass < 3; pass++){
+        for (const c of CLOUD.list){
+          if (c.band !== pass) continue;
+          if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
+          else {
+            ctx.fillStyle='rgba(255,255,255,.85)';
+            ctx.beginPath(); ctx.ellipse(c.x+c.w/2,c.y+c.h/2,c.w/2,c.h/3,0,0,Math.PI*2); ctx.fill();
+          }
+        }
+      }
+      for (const b of bananas) {
+        if (b.kind === 'cuenco' && IMG.cuenco) ctx.drawImage(IMG.cuenco, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
+        else if (IMG.banana) ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
+        else { ctx.fillStyle='#facc15'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); }
+      }
+      for (const o of obstacles) {
+        const img = IMG.obstaculos[o.kind] || null;
+        if (img) ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
+        else { ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill(); }
+      }
+      for (const p of pulses) {
+        const alpha = Math.max(0, p.life / PULSE.life);
+        ctx.strokeStyle = `rgba(99,102,241,${alpha})`; ctx.lineWidth=6;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.rad,0,Math.PI*2); ctx.stroke();
+      }
+      for (let s of sueloScroll) {
+        if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
+        else { ctx.fillStyle='#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); }
+      }
+      const erizoImg =
+        (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
+        (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
+        IMG.erizo.calmado;
+      const t = performance.now() / 300;
+      let scale = 1;
+      if (player.state === 'calmado') scale = 1 + 0.02 * Math.sin(t);
+      else if (player.state === 'inhalando') scale = 1.2;
+      else if (player.state === 'gritando') scale = 0.9;
+      if (erizoImg) {
+        const s = 80 * scale;
+        ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
       } else {
-        // nube de emergencia (ellipse blanca)
-        ctx.fillStyle='rgba(255,255,255,.85)';
-        ctx.beginPath();
-        ctx.ellipse(c.x + c.w/2, c.y + c.h/2, c.w/2, c.h/3, 0, 0, Math.PI*2);
-        ctx.fill();
+        ctx.fillStyle='#8b5cf6'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
       }
     }
-  }
-
-  // Bananas
-  for (const b of bananas) {
-    if (IMG.banana) ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
-    else {
-      ctx.fillStyle = '#facc15';
-      ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
-    }
-  }
-
-  // Obstáculos
-  for (const o of obstacles) {
-    const img = IMG.obstaculos[o.kind] || null;
-    if (img) {
-      ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
-    } else {
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(0,0,0,.2)';
-      ctx.fillRect(o.x-2, o.y-o.r, 4, o.r*2);
-    }
-  }
-
-  // Pulsos
-  for (const p of pulses) {
-    const alpha = Math.max(0, p.life / PULSE.life);
-    ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
-    ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2); ctx.stroke();
-  }
-
-  // Suelo
-  for (let s of sueloScroll) {
-    if (IMG.suelo) {
-      ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
-    } else {
-      // versión de emergencia: suelo verde
-      ctx.fillStyle = '#4ade80';
-      ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
-    }
-  }
-
-  // Erizo
-  const erizoImg =
-    (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
-    (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
-    IMG.erizo.calmado;
-
-  if (erizoImg) {
-    const s = 80; // tamaño destino
-    ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
-  } else {
-    // Dibujo simple estilo erizo redondito
-    ctx.fillStyle = '#111827';
-    ctx.beginPath(); ctx.arc(player.x, player.y, player.r+8, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#8b5cf6';
-    ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
-    // boca
-    ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
-    ctx.beginPath();
-    if (player.state==='gritando') {
-      ctx.arc(player.x, player.y+6, 14, 0, Math.PI*2);
-    } else if (player.state==='inhalando') {
-      ctx.arc(player.x, player.y+10, 10, 0, Math.PI);
-    } else {
-      ctx.moveTo(player.x-8, player.y+8); ctx.lineTo(player.x+8, player.y+8);
-    }
-    ctx.stroke();
-    // ojos
-    ctx.fillStyle = '#111'; ctx.beginPath();
-    ctx.arc(player.x-10, player.y-6, 3, 0, Math.PI*2);
-    ctx.arc(player.x+10, player.y-6, 3, 0, Math.PI*2); ctx.fill();
-  }
-}
 
     function frame(now) {
       const dt = Math.min(0.033, (now - last) / 1000); last = now;
@@ -498,15 +413,12 @@ if (player.y < 80) { // techo límite
       requestAnimationFrame(frame);
     }
 
-    // Arranque
     let started = false;
-function start(){ if (started) return; started = true; reset(); requestAnimationFrame(frame); }
-
-loadAll().then(start);
-// Si alguna imagen queda colgada, arrancamos igual
-setTimeout(start, 2500);
-
+    function start(){ if (started) return; started = true; reset(); requestAnimationFrame(frame); }
+    loadAll().then(start);
+    setTimeout(start, 2500);
   })();
   </script>
 </body>
 </html>
+
