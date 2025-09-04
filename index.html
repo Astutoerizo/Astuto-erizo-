@@ -125,6 +125,12 @@ function playPlin() {
   ],
   banana: "assets/platano_puntos.png",
   suelo: "assets/suelo.png"
+     nubes: [
+    "assets/nubes/nube1.png",
+    "assets/nubes/nube2.png",
+    "assets/nubes/nube3.png",
+    "assets/nubes/nube4.png"
+  ]
 };
 
     // ========= SETUP CANVAS Y ESCALA ===========
@@ -137,6 +143,7 @@ function playPlin() {
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
     const PHYSICS = { gravity: 600, inhaleForce: -420, maxVy: 500 };
+    const GROUND_H = 120; // altura visible del suelo (en px)
 
     let scale = 1, offsetX = 0, offsetY = 0;
     function fit() {
@@ -190,6 +197,7 @@ function playPlin() {
       for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
       IMG.banana = await loadImage(ASSETS.banana);
       IMG.suelo = await loadImage(ASSETS.suelo);
+      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
     }
 
     // ========= GAME LOOP ===========
@@ -212,10 +220,11 @@ function playPlin() {
       CHARGE.value = 0; CHARGE.cooldown = 0;
       SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
       obstacles.length = 0; bananas.length = 0; pulses.length = 0;
-      player.x = 160; player.y = WORLD.h - 160; player.state='calmado';
+      player.x = 160; player.y = WORLD.h - GROUND_H - player.r; player.state='calmado';
       dead = false;
       panel.classList.remove('show');
       hint.style.display = '';
+      initClouds();
     }
 
     btnRestart.addEventListener('click', reset);
@@ -255,7 +264,8 @@ if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
 player.y += player.vy * dt;
 
 // Limitar al suelo
-const sueloTop = WORLD.h - 160;
+// Limitar al suelo
+const sueloTop = WORLD.h - GROUND_H - player.r;
 if (player.y > sueloTop) {
   player.y = sueloTop;
   player.vy = 0;
@@ -351,7 +361,7 @@ if (player.y < 80) { // techo límite
       zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
     }
 
-   function draw() {
+  function draw() {
   // Fondo estático
   ctx.clearRect(0,0,WORLD.w,WORLD.h);
   if (IMG.bg1) {
@@ -360,6 +370,22 @@ if (player.y < 80) { // techo límite
     // fallback si no hay imagen
     ctx.fillStyle = '#bae6fd';
     ctx.fillRect(0, 0, WORLD.w, WORLD.h);
+  }
+
+  // Nubes (parallax: fondo → medio → frente)
+  for (let pass = 0; pass < 3; pass++){
+    for (const c of CLOUD.list){
+      if (c.band !== pass) continue;
+      if (c.img) {
+        ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
+      } else {
+        // nube de emergencia (ellipse blanca)
+        ctx.fillStyle='rgba(255,255,255,.85)';
+        ctx.beginPath();
+        ctx.ellipse(c.x + c.w/2, c.y + c.h/2, c.w/2, c.h/3, 0, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
   }
 
   // Bananas
@@ -395,12 +421,11 @@ if (player.y < 80) { // techo límite
   // Suelo
   for (let s of sueloScroll) {
     if (IMG.suelo) {
-      const h = 120; // altura visible del suelo
-      ctx.drawImage(IMG.suelo, s.x, WORLD.h - h, WORLD.w, h);
+      ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
     } else {
       // versión de emergencia: suelo verde
       ctx.fillStyle = '#4ade80';
-      ctx.fillRect(s.x, WORLD.h - 120, WORLD.w, 120);
+      ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
     }
   }
 
@@ -436,7 +461,6 @@ if (player.y < 80) { // techo límite
     ctx.arc(player.x+10, player.y-6, 3, 0, Math.PI*2); ctx.fill();
   }
 }
-
 
     function frame(now) {
       const dt = Math.min(0.033, (now - last) / 1000); last = now;
