@@ -136,6 +136,7 @@ function playPlin() {
     const panelMsg = document.getElementById('panelMsg');
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
+    const PHYSICS = { gravity: 600, inhaleForce: -420, maxVy: 500 };
 
     let scale = 1, offsetX = 0, offsetY = 0;
     function fit() {
@@ -164,10 +165,7 @@ function playPlin() {
     });
 
     // ========= ENTIDADES ===========
-    const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado' };
-    const backgrounds = [
-      { x: 0 }, { x: WORLD.w }
-    ];
+    const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0 };
     const sueloScroll = [
   { x: 0 }, { x: WORLD.w }
 ];
@@ -224,11 +222,6 @@ function playPlin() {
     window.addEventListener('keydown', (e)=>{ if (e.key === 'r') reset(); });
 
     function update(dt) {
-      // Fondo (scroll)
-      for (let bg of backgrounds) {
-        bg.x -= SPEED.scroll * dt;
-        if (bg.x <= -WORLD.w) bg.x += WORLD.w*2;
-      }
       // Suelo (scroll en bucle)
 for (let s of sueloScroll) {
   s.x -= SPEED.scroll * dt;
@@ -245,12 +238,32 @@ for (let s of sueloScroll) {
         SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05);
       }
 
-      // Input: cargar
-      if (isDown && CHARGE.cooldown <= 0) {
-        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
-        player.state = 'inhalando';
-        if (Math.random() < 0.02) playInhalar(); // pequeños whooshes
-      }
+      // Input + física del erizo
+if (isDown && CHARGE.cooldown <= 0) {
+  player.state = 'inhalando';
+  player.vy += PHYSICS.inhaleForce * dt; // fuerza hacia arriba
+  if (Math.random() < 0.02) playInhalar();
+} else {
+  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
+}
+
+// Aplicar gravedad
+player.vy += PHYSICS.gravity * dt;
+if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
+
+// Mover
+player.y += player.vy * dt;
+
+// Limitar al suelo
+const sueloTop = WORLD.h - 160;
+if (player.y > sueloTop) {
+  player.y = sueloTop;
+  player.vy = 0;
+}
+if (player.y < 80) { // techo límite
+  player.y = 80;
+  player.vy = 0;
+}
 
       // Soltar → pulso
       if (justReleased) {
@@ -338,108 +351,92 @@ for (let s of sueloScroll) {
       zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
     }
 
-    function draw() {
-      // Fondo
-      ctx.clearRect(0,0,WORLD.w,WORLD.h);
-      // Dibujo de fondo: imagen o gradiente
-      for (let i=0;i<backgrounds.length;i++) {
-        const bg = backgrounds[i];
-        if ((i===0 && IMG.bg1) || (i===1 && IMG.bg2)) {
-          const im = (i===0 ? IMG.bg1 : IMG.bg2) || IMG.bg1 || IMG.bg2;
-          if (im) ctx.drawImage(im, bg.x, 0, WORLD.w, WORLD.h);
-          else drawGradient(bg.x);
-        } else {
-          drawGradient(bg.x);
-        }
-      }
-      function drawGradient(x){
-        const g = ctx.createLinearGradient(0,0,0,WORLD.h);
-        g.addColorStop(0, '#fef3c7'); // pastel
-        g.addColorStop(1, '#c7d2fe');
-        ctx.fillStyle = g; ctx.fillRect(x,0,WORLD.w,WORLD.h);
-        // “montañas” absurdas
-        ctx.fillStyle = 'rgba(255,255,255,.2)';
-        for (let k=0;k<6;k++){
-          ctx.beginPath();
-          const y = 180 + k*120;
-          ctx.ellipse(x+WORLD.w*(k%2? .3:.7), y, 160, 40, 0, 0, Math.PI*2);
-          ctx.fill();
-        }
-      }
-
-      // Bananas
-      for (const b of bananas) {
-        if (IMG.banana) ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
-        else {
-          ctx.fillStyle = '#facc15';
-          ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
-        }
-      }
-
-      // Obstáculos
-      for (const o of obstacles) {
-        const img = IMG.obstaculos[o.kind] || null;
-        if (img) {
-          ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
-        } else {
-          ctx.fillStyle = '#ef4444';
-          ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle = 'rgba(0,0,0,.2)';
-          ctx.fillRect(o.x-2, o.y-o.r, 4, o.r*2);
-        }
-      }
-
-      // Pulsos
-      for (const p of pulses) {
-        const alpha = Math.max(0, p.life / PULSE.life);
-        ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
-        ctx.lineWidth = 6;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2); ctx.stroke();
-      }
-      // Suelo
-for (let s of sueloScroll) {
-  if (IMG.suelo) {
-    const h = 120; // altura visible del suelo
-    ctx.drawImage(IMG.suelo, s.x, WORLD.h - h, WORLD.w, h);
+   function draw() {
+  // Fondo estático
+  ctx.clearRect(0,0,WORLD.w,WORLD.h);
+  if (IMG.bg1) {
+    ctx.drawImage(IMG.bg1, 0, 0, WORLD.w, WORLD.h);
   } else {
-    // versión de emergencia: suelo verde
-    ctx.fillStyle = '#4ade80';
-    ctx.fillRect(s.x, WORLD.h - 120, WORLD.w, 120);
+    // fallback si no hay imagen
+    ctx.fillStyle = '#bae6fd';
+    ctx.fillRect(0, 0, WORLD.w, WORLD.h);
+  }
+
+  // Bananas
+  for (const b of bananas) {
+    if (IMG.banana) ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
+    else {
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Obstáculos
+  for (const o of obstacles) {
+    const img = IMG.obstaculos[o.kind] || null;
+    if (img) {
+      ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
+    } else {
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,.2)';
+      ctx.fillRect(o.x-2, o.y-o.r, 4, o.r*2);
+    }
+  }
+
+  // Pulsos
+  for (const p of pulses) {
+    const alpha = Math.max(0, p.life / PULSE.life);
+    ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // Suelo
+  for (let s of sueloScroll) {
+    if (IMG.suelo) {
+      const h = 120; // altura visible del suelo
+      ctx.drawImage(IMG.suelo, s.x, WORLD.h - h, WORLD.w, h);
+    } else {
+      // versión de emergencia: suelo verde
+      ctx.fillStyle = '#4ade80';
+      ctx.fillRect(s.x, WORLD.h - 120, WORLD.w, 120);
+    }
+  }
+
+  // Erizo
+  const erizoImg =
+    (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
+    (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
+    IMG.erizo.calmado;
+
+  if (erizoImg) {
+    const s = 80; // tamaño destino
+    ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
+  } else {
+    // Dibujo simple estilo erizo redondito
+    ctx.fillStyle = '#111827';
+    ctx.beginPath(); ctx.arc(player.x, player.y, player.r+8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#8b5cf6';
+    ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
+    // boca
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (player.state==='gritando') {
+      ctx.arc(player.x, player.y+6, 14, 0, Math.PI*2);
+    } else if (player.state==='inhalando') {
+      ctx.arc(player.x, player.y+10, 10, 0, Math.PI);
+    } else {
+      ctx.moveTo(player.x-8, player.y+8); ctx.lineTo(player.x+8, player.y+8);
+    }
+    ctx.stroke();
+    // ojos
+    ctx.fillStyle = '#111'; ctx.beginPath();
+    ctx.arc(player.x-10, player.y-6, 3, 0, Math.PI*2);
+    ctx.arc(player.x+10, player.y-6, 3, 0, Math.PI*2); ctx.fill();
   }
 }
 
-      // Erizo
-      const erizoImg =
-        (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
-        (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
-        IMG.erizo.calmado;
-
-      if (erizoImg) {
-        const s = 80; // tamaño destino
-        ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
-      } else {
-        // Dibujo simple estilo erizo redondito
-        ctx.fillStyle = '#111827';
-        ctx.beginPath(); ctx.arc(player.x, player.y, player.r+8, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#8b5cf6';
-        ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
-        // boca
-        ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
-        ctx.beginPath();
-        if (player.state==='gritando') {
-          ctx.arc(player.x, player.y+6, 14, 0, Math.PI*2);
-        } else if (player.state==='inhalando') {
-          ctx.arc(player.x, player.y+10, 10, 0, Math.PI);
-        } else {
-          ctx.moveTo(player.x-8, player.y+8); ctx.lineTo(player.x+8, player.y+8);
-        }
-        ctx.stroke();
-        // ojos
-        ctx.fillStyle = '#111'; ctx.beginPath();
-        ctx.arc(player.x-10, player.y-6, 3, 0, Math.PI*2);
-        ctx.arc(player.x+10, player.y-6, 3, 0, Math.PI*2); ctx.fill();
-      }
-    }
 
     function frame(now) {
       const dt = Math.min(0.033, (now - last) / 1000); last = now;
