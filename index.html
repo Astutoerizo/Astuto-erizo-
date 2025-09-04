@@ -124,7 +124,7 @@ function playPlin() {
     "assets/helado_meditando.png"
   ],
   banana: "assets/platano_puntos.png",
-  suelo: "assets/suelo.png"
+  suelo: "assets/suelo.png",
      nubes: [
     "assets/nubes/nube1.png",
     "assets/nubes/nube2.png",
@@ -188,18 +188,36 @@ function playPlin() {
     // ========= IMÁGENES (opcionales) ===========
     const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null };
     function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.onerror = () => res(null); im.src=src; }); }
-    async function loadAll() {
-      IMG.bg1 = await loadImage(ASSETS.bg1);
-      IMG.bg2 = await loadImage(ASSETS.bg2);
-      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
-      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
-      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
-      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
-      IMG.banana = await loadImage(ASSETS.banana);
-      IMG.suelo = await loadImage(ASSETS.suelo);
-      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
-    }
+   async function loadAll() {
+  IMG.bg1 = await loadImage(ASSETS.bg1);
+  IMG.bg2 = await loadImage(ASSETS.bg2);
+  IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
+  IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
+  IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
+  for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
+  IMG.banana = await loadImage(ASSETS.banana);
+  IMG.suelo = await loadImage(ASSETS.suelo);
+  for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
+}
+// Nubes (parallax)
+const CLOUD = { list: [] };
 
+function initClouds() {
+  CLOUD.list = [];
+  for (let i = 0; i < 10; i++) {
+    const band = Math.floor(rand(0,3)); // 0=fondo, 1=medio, 2=frente
+    const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
+    CLOUD.list.push({
+      x: rand(0, WORLD.w),
+      y: rand(50, WORLD.h/2),
+      w: rand(80, 180),
+      h: rand(50, 100),
+      speed: 20 + band * 40, // más cerca → más rápido
+      band,
+      img
+    });
+  }
+}
     // ========= GAME LOOP ===========
     let last = performance.now();
     let dead = false;
