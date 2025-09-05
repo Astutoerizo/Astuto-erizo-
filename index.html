@@ -72,17 +72,19 @@
     const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
     const PULSE  = { base:120, max:380, life:0.25 };
     const POINTS = { total:0 };
+
+    // Mensajes absurdos al chocar
     const CRASH_MESSAGES = [
-  "El erizo se quedó sin aire… como tus plantas en agosto.",
-  "Has gritado al vacío. El vacío gritó de vuelta.",
-  "Chocaste contra la iluminación… pero era un helado.",
-  "Tu zen se fue por el paraguas roto.",
-  "El universo respondió con un plátano invisible.",
-  "Erizo y obstáculo se fundieron en un abrazo incómodo.",
-  "La serenidad se tropezó contigo.",
-  "Has visto la luz... y duele",
-  "Un pato de goma presenció tu derrota."
-];
+      "El erizo se quedó sin aire… como tus plantas en agosto.",
+      "Has gritado al vacío. El vacío gritó de vuelta.",
+      "Chocaste contra la iluminación… pero era un helado.",
+      "Tu zen se fue por el paraguas roto.",
+      "El universo respondió con un plátano invisible.",
+      "Erizo y obstáculo se fundieron en un abrazo incómodo.",
+      "La serenidad se tropezó contigo.",
+      "Has visto la luz... y duele",
+      "Un pato de goma presenció tu derrota."
+    ];
 
     // ======== DESBLOQUEOS =========
     let unlocked = {
@@ -94,18 +96,7 @@
     // ======== SONIDOS =========
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function playInhalar() {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1);
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 1);
-    }
-
+    // --- Generadores simples (se usan poco, la mayoría son archivos externos) ---
     function playGrito() {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -118,34 +109,6 @@
       osc.start();
       osc.stop(audioCtx.currentTime + 0.3);
       playSfx("grito", 0.9);
-    }
-
-    function playPlin() {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.15);
-      playSfx("recolectar", 0.9);
-    }
-
-    function playGong() {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 2);
-      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 2);
-      playSfx("recolectar", 1.0);
     }
 
     // ======== MÚSICA DE FONDO (archivos) =========
@@ -162,7 +125,7 @@
       const src = MUSIC[track];
       if (!src) return;
 
-      if (musicAudio) { // parar anterior
+      if (musicAudio) {
         musicAudio.pause();
         musicAudio = null;
       }
@@ -172,7 +135,7 @@
       musicAudio = audio;
 
       try {
-        await audio.play(); // puede fallar antes del primer toque (móvil)
+        await audio.play(); // en móviles necesita interacción previa
         currentMusic = track;
       } catch (e) {
         currentMusic = null;
@@ -180,21 +143,21 @@
       }
     }
 
-   // ======== SONIDOS FX (archivos) =========
-const SFX = {
-  grito: "assets/sonido_bowl_limpio.mp3",          // para el grito
-  recolectar: "assets/sonido_recolectar_platano.mp3", // para plátano/cuenco
-  inhalar: "assets/sonido_inhalar.mp3",            // ping breve cada 0.5s
-  chocar: "assets/sonido_chocar.mp3",              // al golpear un obstáculo
-};
+    // ======== SONIDOS FX (archivos) =========
+    const SFX = {
+      grito: "assets/sonido_bowl_limpio.mp3",
+      recolectar: "assets/sonido_recolectar_platano.mp3",
+      inhalar: "assets/sonido_inhalar.mp3",
+      chocar: "assets/sonido_chocar.mp3",
+    };
 
-function playSfx(name, volume = 1.0) {
-  const src = SFX[name];
-  if (!src) return;
-  const a = new Audio(src);
-  a.volume = volume;
-  a.play().catch(()=>{});
-}
+    function playSfx(name, volume = 1.0) {
+      const src = SFX[name];
+      if (!src) return;
+      const a = new Audio(src);
+      a.volume = volume;
+      a.play().catch(()=>{});
+    }
 
     // ======== ASSETS =========
     const ASSETS = {
@@ -241,16 +204,16 @@ function playSfx(name, volume = 1.0) {
       canvas.style.height = WORLD.h * s + 'px';
     }
     window.addEventListener('resize', fit); fit();
-
     // ======== INPUT =========
-    let isDown = false, justReleased = false;
+    let isDown = false;
+    let justReleased = false;
     let wasInhaling = false;
-let inhaleSfxTimer = 0;        // acumulador
-const INHALE_SFX_INTERVAL = 0.5; // segundos
+    let inhaleSfxTimer = 0;
+    const INHALE_SFX_INTERVAL = 0.5; // segundos
 
     function withinCanvas(clientX, clientY){
-      const x = (clientX - offsetX) / scale, 
-            y = (clientY - offsetY) / scale;
+      const x = (clientX - offsetX) / scale;
+      const y = (clientY - offsetY) / scale;
       return (x >= 0 && x <= WORLD.w && y >= 0 && y <= WORLD.h);
     }
 
@@ -262,7 +225,8 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
         playMusic("base");
       }
 
-      isDown = true; e.preventDefault();
+      isDown = true;
+      e.preventDefault();
       hint.style.display = 'none';
     });
 
@@ -288,7 +252,15 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
 
     // ======== IMÁGENES =========
     const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[] };
-    function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.onerror = () => res(null); im.src=src; }); }
+    function loadImage(src){
+      return new Promise(res => {
+        if(!src){ res(null); return; }
+        const im = new Image();
+        im.onload = () => res(im);
+        im.onerror = () => res(null);
+        im.src = src;
+      });
+    }
     async function loadAll() {
       IMG.bg1 = await loadImage(ASSETS.bg1);
       IMG.bg2 = await loadImage(ASSETS.bg2);
@@ -297,7 +269,7 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
       IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
       for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
       IMG.banana = await loadImage(ASSETS.banana);
-      IMG.suelo = await loadImage(ASSETS.suelo);
+      IMG.suelo  = await loadImage(ASSETS.suelo);
       IMG.cuenco = await loadImage(ASSETS.cuenco);
       for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
     }
@@ -320,29 +292,44 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
         });
       }
     }
-    // ======== GAME LOOP =========
-    let last = performance.now();
+
+    // ======== ESTADO DE JUEGO =========
     let dead = false;
 
     function spawnObstacle() {
-      const y = rand(240, WORLD.h-180);
+      const y = rand(240, WORLD.h - 180);
       const r = rand(44, 70);
       const speed = Math.min(SPEED.scroll + rand(0,60), SPEED.max);
       obstacles.push({ x: WORLD.w + 60, y, r, speed, kind: Math.floor(rand(0, IMG.obstaculos.length)) });
+
       if (chance(0.30)) {
-        bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 44, speed: speed+40, kind: 'banana' });
+        bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h - 200), r: 44, speed: speed + 40, kind: 'banana' });
       }
       if (chance(0.10)) {
-        bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h-200), r: 44, speed: speed+20, kind: 'cuenco' });
+        bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h - 200), r: 44, speed: speed + 20, kind: 'cuenco' });
       }
     }
 
     function reset() {
       POINTS.total = 0;
-      CHARGE.value = 0; CHARGE.cooldown = 0;
-      SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
-      obstacles.length = 0; bananas.length = 0; pulses.length = 0;
-      player.y = WORLD.h - GROUND_H - player.r + 20; player.state='calmado';
+      CHARGE.value = 0;
+      CHARGE.cooldown = 0;
+
+      SPEED.scroll = 280;
+      SPAWN.interval = 1.2;
+      SPAWN.timer = 0;
+      SPAWN.diffTimer = 0;
+
+      obstacles.length = 0;
+      bananas.length = 0;
+      pulses.length = 0;
+      particles.length = 0;
+
+      player.y = WORLD.h - GROUND_H - player.r + 20;
+      player.state = 'calmado';
+      player.vy = 0;
+      player.mareo = 0;
+
       dead = false;
       panel.classList.remove('show');
       hint.style.display = '';
@@ -362,6 +349,7 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
 
     btnRestart.addEventListener('click', reset);
 
+    // ======== UPDATE =========
     function update(dt) {
       // Suelo
       for (let s of sueloScroll) {
@@ -381,56 +369,49 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
         }
       }
 
-      // Spawner
-      SPAWN.timer += dt; SPAWN.diffTimer += dt;
-      if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; spawnObstacle(); }
+      // Spawner & dificultad
+      SPAWN.timer += dt;
+      SPAWN.diffTimer += dt;
+      if (SPAWN.timer >= SPAWN.interval) {
+        SPAWN.timer = 0;
+        spawnObstacle();
+      }
       if (SPAWN.diffTimer >= 10) {
         SPAWN.diffTimer = 0;
         SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max);
         SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05);
       }
 
-      // Input + física
-   if (isDown && CHARGE.cooldown <= 0) {
-  player.state = 'inhalando';
+      // ===== Input + física (corregido) =====
+      if (isDown && CHARGE.cooldown <= 0) {
+        player.state = 'inhalando';
 
-  // Si está cayendo rápido, recorta inercia para que responda mejor
-  if (player.vy > 220) player.vy *= 0.5;
+        // Si cae rápido, recorta inercia
+        if (player.vy > 220) player.vy *= 0.5;
 
-  // Empuje más fuerte si venía cayendo
-  const boost = (player.vy > 0 ? 1.5 : 1.0);
-  player.vy += PHYSICS.inhaleForce * boost * dt;
+        // Empuje algo mayor si venía cayendo
+        const boost = (player.vy > 0 ? 1.5 : 1.0);
+        player.vy += PHYSICS.inhaleForce * boost * dt;
 
+        // Carga de grito
+        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
 
-  // Sonido de inhalar rítmico (al empezar y cada 0.5s)
-  if (!wasInhaling) {
-    playSfx("inhalar", 0.25);
-    inhaleSfxTimer = 0;
-  }
-  inhaleSfxTimer += dt;
-  if (inhaleSfxTimer >= INHALE_SFX_INTERVAL) {
-    playSfx("inhalar", 0.25);
-    inhaleSfxTimer = 0;
-  }
+        // Sonido de inhalar rítmico (al empezar y cada 0.5s)
+        if (!wasInhaling) {
+          playSfx("inhalar", 0.25);
+          inhaleSfxTimer = 0;
+        } else {
+          inhaleSfxTimer += dt;
+          if (inhaleSfxTimer >= INHALE_SFX_INTERVAL) {
+            playSfx("inhalar", 0.25);
+            inhaleSfxTimer = 0;
+          }
+        }
+      }
 
-  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
+      wasInhaling = isDown && CHARGE.cooldown <= 0;
 
-  // Si soltó → resetear timer
-  inhaleSfxTimer = 0;
-}
-wasInhaling = isDown && CHARGE.cooldown <= 0;
-
-
-  // Hinchado + pequeña ondulación
-  player.y += Math.sin(performance.now() / 200) * 0.5;
-
-  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
-
-  // (El sonido de inhalar ya lo gestiona el timer nuevo, no pongas aleatorios aquí)
-} else {
-  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
-}
-
+      // Gravedad y límites verticales
       player.vy += PHYSICS.gravity * dt;
       if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
       player.y += player.vy * dt;
@@ -439,19 +420,26 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
       if (player.y > sueloTop) { player.y = sueloTop; player.vy = 0; }
       if (player.y < 80) { player.y = 80; player.vy = 0; }
 
+      // Soltar (emitir pulso / grito)
       if (justReleased) {
         justReleased = false;
         if (CHARGE.cooldown <= 0) {
           if (CHARGE.value >= CHARGE.over) {
-            CHARGE.cooldown = 0.7; CHARGE.value = 0; player.state = 'gritando';
+            CHARGE.cooldown = 0.7;
+            CHARGE.value = 0;
+            player.state = 'gritando';
           } else {
             const t = CHARGE.value / CHARGE.max;
             const rad = PULSE.base + t * (PULSE.max - PULSE.base);
-            pulses.push({ x: player.x+40, y: player.y, rad, life: PULSE.life });
+            pulses.push({ x: player.x + 40, y: player.y, rad, life: PULSE.life });
             CHARGE.cooldown = CHARGE.cooldownBase;
-            CHARGE.value = 0; player.state = 'gritando'; playGrito();
+            CHARGE.value = 0;
+            player.state = 'gritando';
+            playGrito();
           }
         }
+        // Reiniciar metrónomo de inhalar
+        inhaleSfxTimer = 0;
       }
 
       // Si toca el suelo con demasiada velocidad → mareo
@@ -467,32 +455,18 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
           player.state = 'mareado';
           player.mareo = 0;
         }
-      } else {
-        if (player.mareo > 0) player.mareo -= dt * 0.5;
+      } else if (player.mareo > 0) {
+        player.mareo -= dt * 0.5;
       }
 
-      // Cooldown y estado del erizo
+      // Cooldown de grito
       if (CHARGE.cooldown > 0) {
         CHARGE.cooldown -= dt;
         if (CHARGE.cooldown < 0) CHARGE.cooldown = 0;
       }
 
-      // === Desbloqueos ===
-      if (!unlocked.boss && POINTS.total >= 50) {
-        unlocked.boss = true;
-        localStorage.setItem("unlockedBoss", "true");
-        updateMenuButtons();
-        alert("✨ Has desbloqueado el Modo Boss!");
-      }
-
-      if (!unlocked.bonus && POINTS.total >= 75) {
-        unlocked.bonus = true;
-        localStorage.setItem("unlockedBonus", "true");
-        updateMenuButtons();
-        alert("🌸 Has desbloqueado el Modo Bonus!");
-      }
-
-      if (!isDown && CHARGE.cooldown === 0) {
+      // Volver a calmado cuando no pulsa y no hay cooldown
+      if (!isDown && CHARGE.cooldown === 0 && player.state !== 'mareado') {
         player.state = 'calmado';
       }
 
@@ -517,67 +491,97 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
         if (p.life <= 0) particles.splice(i, 1);
       }
 
-      // Pulsos
-      for (let i = pulses.length-1; i>=0; i--) {
-        const p = pulses[i]; p.life -= dt;
-        if (p.life <= 0) { pulses.splice(i,1); continue; }
-        for (let j = obstacles.length-1; j>=0; j--) {
+      // Pulsos → dañan obstáculos
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        p.life -= dt;
+        if (p.life <= 0) { pulses.splice(i, 1); continue; }
+        for (let j = obstacles.length - 1; j >= 0; j--) {
           const o = obstacles[j];
-          if (dist2(p.x,p.y,o.x,o.y) <= (p.rad+o.r)*(p.rad+o.r)) {
-            obstacles.splice(j,1); POINTS.total += 2;
+          if (dist2(p.x, p.y, o.x, o.y) <= (p.rad + o.r) * (p.rad + o.r)) {
+            obstacles.splice(j, 1);
+            POINTS.total += 2;
           }
         }
       }
 
-      // Obstáculos y bananas
-      for (let i = obstacles.length-1; i>=0; i--) {
-        const o = obstacles[i]; o.x -= o.speed * dt; if (o.x < -120) obstacles.splice(i,1);
+      // Obstáculos y coleccionables
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.x -= o.speed * dt;
+        if (o.x < -120) obstacles.splice(i, 1);
       }
-      for (let i = bananas.length-1; i>=0; i--) {
-        const b = bananas[i]; b.x -= b.speed * dt; if (b.x < -120) bananas.splice(i,1);
+      for (let i = bananas.length - 1; i >= 0; i--) {
+        const b = bananas[i];
+        b.x -= b.speed * dt;
+        if (b.x < -120) bananas.splice(i, 1);
       }
 
       // Colisiones
-      for (let i = obstacles.length-1; i>=0; i--) {
+      for (let i = obstacles.length - 1; i >= 0; i--) {
         const o = obstacles[i];
-        if (dist2(o.x,o.y,player.x,player.y) <= (o.r+player.r)*(o.r+player.r)) {
+        if (dist2(o.x, o.y, player.x, player.y) <= (o.r + player.r) * (o.r + player.r)) {
           playSfx("chocar", 0.7);
           dead = true;
           panelMsg.textContent = CRASH_MESSAGES[Math.floor(Math.random() * CRASH_MESSAGES.length)];
           panel.classList.add('show');
         }
       }
-      for (let i = bananas.length-1; i>=0; i--) {
-        const b = bananas[i];
-        if (dist2(b.x,b.y,player.x,player.y) <= (b.r+player.r)*(b.r+player.r)) {
-          bananas.splice(i,1);
-          if (b.kind === 'cuenco') { POINTS.total += 5; playSfx("recolectar", 0.9);
-} else { 
-  POINTS.total += 1; 
-  playSfx("recolectar", 0.8);
-}
-        }
 
+      for (let i = bananas.length - 1; i >= 0; i--) {
+        const b = bananas[i];
+        if (dist2(b.x, b.y, player.x, player.y) <= (b.r + player.r) * (b.r + player.r)) {
+          bananas.splice(i, 1);
+          if (b.kind === 'cuenco') {
+            POINTS.total += 5;
+            playSfx("recolectar", 0.9);
+          } else {
+            POINTS.total += 1;
+            playSfx("recolectar", 0.8);
+          }
+        }
+      }
+
+      // HUD
       scoreEl.textContent = "Puntos: " + POINTS.total;
       zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
       zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
+
+      // === Desbloqueos ===
+      if (!unlocked.boss && POINTS.total >= 50) {
+        unlocked.boss = true;
+        localStorage.setItem("unlockedBoss", "true");
+        updateMenuButtons();
+        alert("✨ Has desbloqueado el Modo Boss!");
+      }
+      if (!unlocked.bonus && POINTS.total >= 75) {
+        unlocked.bonus = true;
+        localStorage.setItem("unlockedBonus", "true");
+        updateMenuButtons();
+        alert("🌸 Has desbloqueado el Modo Bonus!");
+      }
     }
+    // ======== DRAW =========
     function draw() {
-      ctx.clearRect(0,0,WORLD.w,WORLD.h);
+      ctx.clearRect(0, 0, WORLD.w, WORLD.h);
 
       // Fondo
       if (IMG.bg1) ctx.drawImage(IMG.bg1, 0, 0, WORLD.w, WORLD.h);
-      else { ctx.fillStyle = '#1b1b1f'; ctx.fillRect(0,0,WORLD.w,WORLD.h); }
+      else {
+        ctx.fillStyle = '#1b1b1f';
+        ctx.fillRect(0, 0, WORLD.w, WORLD.h);
+      }
 
-      // Nubes por pasadas (parallax)
-      for (let pass = 0; pass < 3; pass++){
-        for (const c of CLOUD.list){
+      // Nubes por capas
+      for (let pass = 0; pass < 3; pass++) {
+        for (const c of CLOUD.list) {
           if (c.band !== pass) continue;
-          if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
-          else {
-            ctx.fillStyle='rgba(255,255,255,.85)';
+          if (c.img) {
+            ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
+          } else {
+            ctx.fillStyle = 'rgba(255,255,255,.85)';
             ctx.beginPath();
-            ctx.ellipse(c.x+c.w/2,c.y+c.h/2,c.w/2,c.h/3,0,0,Math.PI*2);
+            ctx.ellipse(c.x + c.w/2, c.y + c.h/2, c.w/2, c.h/3, 0, 0, Math.PI*2);
             ctx.fill();
           }
         }
@@ -590,7 +594,7 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
         } else if (IMG.banana) {
           ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
         } else {
-          ctx.fillStyle='#facc15';
+          ctx.fillStyle = '#facc15';
           ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
         }
       }
@@ -600,7 +604,7 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
         const img = IMG.obstaculos[o.kind] || null;
         if (img) ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
         else {
-          ctx.fillStyle='#ef4444';
+          ctx.fillStyle = '#ef4444';
           ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
         }
       }
@@ -609,49 +613,59 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
       for (const p of pulses) {
         const alpha = Math.max(0, p.life / PULSE.life);
         ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
-        ctx.lineWidth=6;
-        ctx.beginPath(); ctx.arc(p.x,p.y,p.rad,0,Math.PI*2); ctx.stroke();
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2);
+        ctx.stroke();
       }
 
       // Suelo
       for (let s of sueloScroll) {
         if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
-        else { ctx.fillStyle='#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); }
+        else {
+          ctx.fillStyle = '#4ade80';
+          ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
+        }
       }
 
       // Partículas zen
       for (const p of particles) {
         const alpha = Math.max(0, p.life);
-        ctx.fillStyle = p.color + alpha + ")"; // color base + alpha dinámico
-        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = p.color + alpha + ")";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+        ctx.fill();
       }
 
       // Aura zen
       const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300);
       ctx.fillStyle = `rgba(255,255,255,${0.25 * pulse})`;
-      ctx.beginPath(); ctx.arc(player.x, player.y, 60, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 60, 0, Math.PI*2);
+      ctx.fill();
 
-      // Sprite del erizo
+      // Sprite erizo
       const erizoImg =
-        (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
-        (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
+        (player.state === 'inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
+        (player.state === 'gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
         IMG.erizo.calmado;
 
-      // Estado mareado: cabeceo y estrellitas
       if (player.state === 'mareado') {
         ctx.save();
         ctx.translate(player.x, player.y);
         ctx.rotate(Math.sin(performance.now()/200) * 0.3);
         if (erizoImg) ctx.drawImage(erizoImg, -40, -40, 80, 80);
         else {
-          ctx.fillStyle='#8b5cf6'; ctx.beginPath(); ctx.arc(0,0,player.r,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#8b5cf6';
+          ctx.beginPath(); ctx.arc(0,0,player.r,0,Math.PI*2); ctx.fill();
         }
         ctx.restore();
 
+        // Estrellitas
         ctx.fillStyle = 'yellow';
         ctx.beginPath(); ctx.arc(player.x-20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(player.x+20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
-        return; // no dibujar extras encima
+        return;
       }
 
       // Escala según estado
@@ -663,14 +677,13 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
 
       if (erizoImg) {
         const s = 80 * erizoScale;
-        ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
+        ctx.drawImage(erizoImg, player.x - s/2, player.y - s/2, s, s);
 
-        // Detallitos: brazos y patitas
+        // Brazos y patas
         const t2 = performance.now() / 200;
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 3;
 
-        // Brazos
         ctx.beginPath();
         ctx.moveTo(player.x - s*0.3, player.y);
         ctx.lineTo(player.x - s*0.3 - 6*Math.sin(t2), player.y + 10);
@@ -678,7 +691,6 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
         ctx.lineTo(player.x + s*0.3 + 6*Math.sin(t2), player.y + 10);
         ctx.stroke();
 
-        // Patitas
         ctx.beginPath();
         ctx.moveTo(player.x - s*0.2, player.y + s*0.4);
         ctx.lineTo(player.x - s*0.2, player.y + s*0.4 + 6*Math.cos(t2));
@@ -692,12 +704,12 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
     }
 
     // ======== BUCLE PRINCIPAL =========
-    let last = performance.now();
+    let lastFrame = performance.now();
     let started = false;
 
     function frame(now) {
-      const dt = Math.min(0.033, (now - last) / 1000);
-      last = now;
+      const dt = Math.min(0.033, (now - lastFrame) / 1000);
+      lastFrame = now;
       if (!dead) update(dt);
       draw();
       requestAnimationFrame(frame);
@@ -710,10 +722,10 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
       requestAnimationFrame(frame);
     }
 
-    // Carga de recursos y arranque
     loadAll().then(start);
+    setTimeout(start, 2500);
 
-    // Botones de menú/modal y desbloqueos visuales
+    // ======== MENÚ & DESBLOQUEOS =========
     function updateMenuButtons() {
       const bossBtn  = document.getElementById("btnBoss");
       const bonusBtn = document.getElementById("btnBonus");
@@ -722,10 +734,6 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
     }
     updateMenuButtons();
 
-    // Asegurar arranque incluso si tarda en cargar algo
-    setTimeout(start, 2500);
-
-    // Listeners de selección de modo
     const btnNormal = document.getElementById("btnNormal");
     const btnBoss   = document.getElementById("btnBoss");
     const btnBonus  = document.getElementById("btnBonus");
