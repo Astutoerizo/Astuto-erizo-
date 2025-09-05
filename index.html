@@ -106,7 +106,7 @@
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.3);
-      playSfx("bowl", 0.9);
+      playSfx("grito", 0.9);
     }
 
     function playPlin() {
@@ -120,7 +120,7 @@
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.15);
-      playSfx("plop", 0.7);
+      playSfx("recolectar", 0.9);
     }
 
     function playGong() {
@@ -134,6 +134,7 @@
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 2);
+      playSfx("recolectar", 1.0);
     }
 
     // ======== MÚSICA DE FONDO (archivos) =========
@@ -168,20 +169,21 @@
       }
     }
 
-    // ======== SONIDOS FX (archivos) =========
-    const SFX = {
-      carga: "assets/sonido_carga_intenso.mp3",
-      bowl:  "assets/sonido_bowl_limpio.mp3",
-      plop:  "assets/sonido_plop.mp3",
-    };
+   // ======== SONIDOS FX (archivos) =========
+const SFX = {
+  grito: "assets/sonido_bowl_limpio.mp3",          // para el grito
+  recolectar: "assets/sonido_recolectar_platano.mp3", // para plátano/cuenco
+  inhalar: "assets/sonido_inhalar.mp3",            // ping breve cada 0.5s
+  chocar: "assets/sonido_chocar.mp3",              // al golpear un obstáculo
+};
 
-    function playSfx(name, volume = 1.0) {
-      const src = SFX[name];
-      if (!src) return;
-      const a = new Audio(src);
-      a.volume = volume;
-      a.play().catch(()=>{});
-    }
+function playSfx(name, volume = 1.0) {
+  const src = SFX[name];
+  if (!src) return;
+  const a = new Audio(src);
+  a.volume = volume;
+  a.play().catch(()=>{});
+}
 
     // ======== ASSETS =========
     const ASSETS = {
@@ -231,6 +233,9 @@
 
     // ======== INPUT =========
     let isDown = false, justReleased = false;
+    let wasInhaling = false;
+let inhaleSfxTimer = 0;        // acumulador
+const INHALE_SFX_INTERVAL = 0.5; // segundos
 
     function withinCanvas(clientX, clientY){
       const x = (clientX - offsetX) / scale, 
@@ -375,11 +380,52 @@
       }
 
       // Input + física
-      if (isDown && CHARGE.cooldown <= 0) {
-        player.state = 'inhalando';
+   if (isDown && CHARGE.cooldown <= 0) {
+  player.state = 'inhalando';
 
-        // Fuerza hacia arriba (sube mientras está inhalando)
-        player.vy += PHYSICS.inhaleForce * dt;
+  // Si está cayendo rápido, recorta inercia para que responda mejor
+  if (player.vy > 220) player.vy *= 0.5;
+
+  // Empuje más fuerte si venía cayendo
+  const boost = (player.vy > 0 ? 1.5 : 1.0);
+  player.vy += PHYSICS.inhaleForce * boost * dt;
+
+  // Hinchado + pequeña ondulación
+  player.y += Math.sin(performance.now() / 200) * 0.5;
+
+  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+
+  // (El sonido de inhalar ya lo gestiona el timer nuevo, no pongas aleatorios aquí)
+} else {
+  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
+}
+
+  // Fuerza hacia arriba (más fuerte si venía cayendo)
+  const boost = (player.vy > 0 ? 1.5 : 1.0);
+  player.vy += PHYSICS.inhaleForce * boost * dt;
+
+  // Hinchado + ondulación
+  player.y += Math.sin(performance.now() / 200) * 0.5;
+
+  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+       
+
+// Sonido de inhalar rítmico (inmediato al empezar y luego cada 0.5s)
+if (!wasInhaling) {
+  playSfx("inhalar", 0.25);     // feedback instantáneo al empezar a inhalar
+  inhaleSfxTimer = 0;
+}
+inhaleSfxTimer += dt;
+if (inhaleSfxTimer >= INHALE_SFX_INTERVAL) {
+  playSfx("inhalar", 0.25);
+  inhaleSfxTimer = 0;
+  const inhaling = isDown && CHARGE.cooldown <= 0;
+if (!inhaling) {
+  inhaleSfxTimer = 0; // resetea cuando suelta
+}
+wasInhaling = inhaling;
+}
+}
 
         // Hinchado + pequeña ondulación
         player.y += Math.sin(performance.now() / 200) * 0.5;
@@ -500,6 +546,7 @@
       for (let i = obstacles.length-1; i>=0; i--) {
         const o = obstacles[i];
         if (dist2(o.x,o.y,player.x,player.y) <= (o.r+player.r)*(o.r+player.r)) {
+          playSfx("chocar", 0.7);
           dead = true;
           panelMsg.textContent = (Math.random() < .5)
             ? "El erizo se quedó sin aire… como tus plantas en agosto."
@@ -511,10 +558,12 @@
         const b = bananas[i];
         if (dist2(b.x,b.y,player.x,player.y) <= (b.r+player.r)*(b.r+player.r)) {
           bananas.splice(i,1);
-          if (b.kind === 'cuenco') { POINTS.total += 5; playGong(); }
-          else { POINTS.total += 1; playPlin(); }
+          if (b.kind === 'cuenco') { POINTS.total += 5; playSfx("recolectar", 0.9);
+} else { 
+  POINTS.total += 1; 
+  playSfx("recolectar", 0.8);
+}
         }
-      }
 
       scoreEl.textContent = "Puntos: " + POINTS.total;
       zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
