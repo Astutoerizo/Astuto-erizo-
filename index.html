@@ -43,9 +43,18 @@
       background: #555;
       color: #aaa;
       cursor: not-allowed;
+      pointer-events: none;
     }
-    #countdown { backdrop-filter: blur(2px); }
-    #countdown img { image-rendering: crisp-edges; }
+    /* Overlay de cuenta atrás (UN SOLO overlay) */
+    #countdown { 
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center; 
+      background:rgba(0,0,0,.45); z-index:9999; backdrop-filter: blur(2px);
+    }
+    #countdown img { 
+      max-width:240px; width:60%; height:auto; 
+      image-rendering: crisp-edges; 
+      filter: drop-shadow(0 8px 24px rgba(0,0,0,.55)); 
+    }
   </style>
 </head>
 <body>
@@ -69,9 +78,9 @@
 
   <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div>
 
-  <!-- Overlay de cuenta atrás absurda -->
-  <div id="countdown" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:9999;">
-    <img id="countImg" alt="" style="max-width:240px; width:60%; height:auto; filter: drop-shadow(0 8px 24px rgba(0,0,0,.55));" />
+  <!-- UN SOLO overlay de cuenta atrás -->
+  <div id="countdown">
+    <img id="countImg" alt="" />
   </div>
 
   <script>
@@ -85,6 +94,10 @@
     const POINTS = { total:0 };
     const PHYSICS = { gravity: 600, inhaleForce: -900, maxVy: 500 };
     const GROUND_H = 180;
+
+    // Control de carga y arranque
+    let assetsLoaded = false;       // Para no arrancar ni countdown sin assets
+    let pendingMode = null;         // Si el usuario pulsa antes de cargar, guardamos el modo elegido
 
     // Mensajes absurdos al chocar
     const CRASH_MESSAGES = [
@@ -133,7 +146,7 @@
       audio.loop = loop; audio.volume = volume;
       musicAudio = audio;
       try { await audio.play(); currentMusic = track; }
-      catch { currentMusic = null; console.log("Música esperando interacción…"); }
+      catch { currentMusic = null; /* Espera interacción del usuario */ }
     }
     function playSfx(name, volume = 1.0) {
       const src = SFX[name]; if (!src) return;
@@ -176,10 +189,9 @@
         "assets/contador_helado.png"
       ],
       contadorGo: "assets/contador_go.png",
-      logo: "assets/logo_videojuego.png"
     };
 
-    // ======== CANVAS =========
+    // ======== CANVAS & DOM =========
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const zenFill = document.getElementById('zenFill');
@@ -199,28 +211,9 @@
     }
     window.addEventListener('resize', fit); fit();
 
-    // ======== IMÁGENES =========
-    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[], contador:[], contadorGo:null, logo:null };
-    function loadImage(src){ return new Promise(res => { if(!src){res(null);return;} const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; }); }
-    async function loadAll() {
-      IMG.bg1 = await loadImage(ASSETS.bg1);
-      IMG.bg2 = await loadImage(ASSETS.bg2);
-      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
-      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
-      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
-      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
-      IMG.banana = await loadImage(ASSETS.banana);
-      IMG.suelo  = await loadImage(ASSETS.suelo);
-      IMG.cuenco = await loadImage(ASSETS.cuenco);
-      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
-      for (let src of ASSETS.contador) IMG.contador.push(await loadImage(src));
-      IMG.contadorGo = await loadImage(ASSETS.contadorGo);
-      IMG.logo = await loadImage(ASSETS.logo);
-    }
     // ======== INPUT =========
     let isDown = false, justReleased = false, wasInhaling = false;
     let inhaleSfxTimer = 0;
-    const INHALE_SFX_INTERVAL = 0.5;
 
     function withinCanvas(clientX, clientY){
       const x = (clientX - offsetX) / scale, y = (clientY - offsetY) / scale;
@@ -233,7 +226,6 @@
       if (!musicAudio || currentMusic === null) playMusic("base");
       isDown = true; e.preventDefault(); hint.style.display = 'none';
     });
-
     window.addEventListener('pointerup', (e) => {
       if (!isDown) return;
       isDown = false; justReleased = true; e.preventDefault();
@@ -248,9 +240,38 @@
     // ======== UTIL =========
     const rand = (a,b) => a + Math.random()*(b-a);
     const chance = (p) => Math.random() < p;
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
+    // ======== IMÁGENES =========
+    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[], contador:[], contadorGo:null };
+
+    function loadImage(src){
+      return new Promise(res => {
+        if(!src){res(null);return;}
+        const im = new Image();
+        im.onload = async () => { 
+          if (im.decode) { try { await im.decode(); } catch {} }
+          res(im); 
+        };
+        im.onerror = () => { console.warn("No se pudo cargar:", src); res(null); };
+        im.src = src + "?v=" + Date.now(); // evitar caché vieja de GitHub Pages
+      });
+    }
+
+    async function loadAll() {
+      IMG.bg1 = await loadImage(ASSETS.bg1);
+      IMG.bg2 = await loadImage(ASSETS.bg2);
+      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
+      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
+      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
+      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
+      IMG.banana = await loadImage(ASSETS.banana);
+      IMG.suelo  = await loadImage(ASSETS.suelo);
+      IMG.cuenco = await loadImage(ASSETS.cuenco);
+      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
+      for (let src of ASSETS.contador) IMG.contador.push(await loadImage(src));
+      IMG.contadorGo = await loadImage(ASSETS.contadorGo);
+    }
     // ======== NUBES =========
     function initClouds() {
       CLOUD.list = [];
@@ -263,7 +284,6 @@
 
     // ======== ESTADO Y SPAWNER =========
     let dead = false;
-
     function spawnObstacle() {
       const y = rand(240, WORLD.h - 180);
       const r = rand(44, 70);
@@ -370,7 +390,7 @@
           inhaleSfxTimer = 0;
         } else {
           inhaleSfxTimer += dt;
-          if (inhaleSfxTimer >= INHALE_SFX_INTERVAL) {
+          if (inhaleSfxTimer >= 0.5) {
             playSfx("inhalar", 0.25);
             inhaleSfxTimer = 0;
           }
@@ -392,19 +412,17 @@
         justReleased = false;
         if (CHARGE.cooldown <= 0) {
           if (CHARGE.value >= CHARGE.over) {
-            // Grito demasiado cargado → pequeño castigo (cooldown más largo)
             CHARGE.cooldown = 0.7;
             CHARGE.value = 0;
             player.state = 'gritando';
           } else {
-            // Pulso circular
             const t = CHARGE.value / CHARGE.max;
             const rad = PULSE.base + t * (PULSE.max - PULSE.base);
             pulses.push({ x: player.x + 40, y: player.y, rad, life: PULSE.life });
             CHARGE.cooldown = CHARGE.cooldownBase;
             CHARGE.value = 0;
             player.state = 'gritando';
-            // Sfx mezcla: oscilador corto + wav
+            // Sfx combinado (sencillo + archivo)
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = "square";
@@ -430,10 +448,7 @@
       // Mareo acumulado al gritar
       if (player.state === 'gritando') {
         player.mareo += dt;
-        if (player.mareo > 3) {
-          player.state = 'mareado';
-          player.mareo = 0;
-        }
+        if (player.mareo > 3) { player.state = 'mareado'; player.mareo = 0; }
       } else if (player.mareo > 0) {
         player.mareo -= dt * 0.5;
       }
@@ -521,7 +536,7 @@
       zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
       zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
 
-      // Desbloqueos persistentes
+      // Desbloqueos
       if (!unlocked.boss && POINTS.total >= 50) {
         unlocked.boss = true;
         localStorage.setItem("unlockedBoss", "true");
@@ -661,8 +676,7 @@
         ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
       }
     }
-```0
-// ======== LOOP PRINCIPAL =========
+    // ======== LOOP PRINCIPAL =========
     let lastFrame = performance.now();
     let started = false;
 
@@ -681,18 +695,22 @@
       requestAnimationFrame(frame);
     }
 
-    // ======== CARGA DE ASSETS (no arrancar hasta elegir modo) =========
-    loadAll().then(() => {
-      updateMenuButtons();
-      // no start() aquí → esperamos al botón + countdown
-    });
-
     // ======== MENÚ Y DESBLOQUEOS =========
     function updateMenuButtons() {
       const bossBtn  = document.getElementById("btnBoss");
       const bonusBtn = document.getElementById("btnBonus");
-      if (bossBtn  && unlocked.boss)  bossBtn.classList.remove("locked");
-      if (bonusBtn && unlocked.bonus) bonusBtn.classList.remove("locked");
+      if (!assetsLoaded) {
+        // Mientras carga, todos bloqueados
+        const btns = document.querySelectorAll(".card .btn");
+        btns.forEach(b => { b.classList.add("locked"); b.dataset.orig = b.textContent; b.textContent = "Cargando…"; });
+        return;
+      }
+      // Restaurar textos al terminar la carga
+      const btns = document.querySelectorAll(".card .btn");
+      btns.forEach(b => { if (b.dataset.orig) { b.textContent = b.dataset.orig; delete b.dataset.orig; } });
+
+      if (bossBtn)  bossBtn.classList.toggle("locked", !unlocked.boss);
+      if (bonusBtn) bonusBtn.classList.toggle("locked", !unlocked.bonus);
     }
 
     // ======== COUNTDOWN ABSURDO =========
@@ -743,6 +761,12 @@
     const menuPanel = document.getElementById("menuPanel");
 
     function startAfterMenu(mode){
+      // Si aún no han cargado los assets, guardamos la intención y esperamos
+      if (!assetsLoaded) {
+        pendingMode = mode;
+        updateMenuButtons(); // muestra "Cargando…"
+        return;
+      }
       if (modeChosen) return;
       modeChosen = true;
       currentMode = mode;
@@ -753,6 +777,19 @@
     if (btnNormal) btnNormal.addEventListener("click", () => startAfterMenu("normal"));
     if (btnBoss)   btnBoss.addEventListener("click",   () => { if (!unlocked.boss) return; startAfterMenu("boss"); });
     if (btnBonus)  btnBonus.addEventListener("click",  () => { if (!unlocked.bonus) return; startAfterMenu("bonus"); });
+
+    // ======== CARGA DE ASSETS (NO arrancar hasta elegir modo) =========
+    // Bloquea botones mientras carga
+    updateMenuButtons();
+    loadAll().then(() => {
+      assetsLoaded = true;
+      updateMenuButtons();
+      // Si el usuario ya pulsó un modo durante la carga, arrancamos ahora
+      if (pendingMode) {
+        startAfterMenu(pendingMode);
+        pendingMode = null;
+      }
+    });
 
   })();
   </script>
@@ -773,5 +810,6 @@
       </p>
     </div>
   </div>
+
 </body>
 </html>
