@@ -121,7 +121,36 @@
       osc.start();
       osc.stop(audioCtx.currentTime + 2);
     }
+// ======== MÚSICA DE FONDO =========
+const MUSIC = {
+  nivel1: "assets/musica_base.mp3",
+  boss: "assets/musica_boss.mp3",
+  bonus: "assets/musica_bonus.mp3"
+};
 
+let musicAudio = null;
+
+async function playMusic(trackName, loop = true) {
+  const src = MUSIC[trackName];
+  if (!src) return;
+
+  // Paramos la música anterior si suena
+  if (musicAudio) {
+    musicAudio.pause();
+    musicAudio = null;
+  }
+
+  // Creamos nuevo <audio>
+  musicAudio = new Audio(src);
+  musicAudio.loop = loop;
+  musicAudio.volume = 0.5; // 🎚️ volumen general (ajustable)
+  
+  try {
+    await musicAudio.play();
+  } catch (e) {
+    console.log("⚠️ Música bloqueada hasta interacción del usuario:", e);
+  }
+}
     // ======== ASSETS =========
     const ASSETS = {
       bg1: "assets/fondo_calc.png",
@@ -168,22 +197,34 @@
     }
     window.addEventListener('resize', fit); fit();
 
-    // ======== INPUT =========
-    let isDown = false, justReleased = false;
-    function withinCanvas(clientX, clientY){
-      const x = (clientX - offsetX) / scale, y = (clientY - offsetY) / scale;
-      return (x>=0 && x<=WORLD.w && y>=0 && y<=WORLD.h);
-    }
-    canvas.addEventListener('pointerdown', (e) => {
-      if (!withinCanvas(e.clientX, e.clientY)) return;
-      isDown = true; e.preventDefault();
-      hint.style.display = 'none';
-    });
-    window.addEventListener('pointerup', (e) => {
-      if (!isDown) return;
-      isDown = false; justReleased = true; e.preventDefault();
-    });
+  // ======== INPUT =========
+let isDown = false, justReleased = false;
 
+function withinCanvas(clientX, clientY){
+  const x = (clientX - offsetX) / scale, 
+        y = (clientY - offsetY) / scale;
+  return (x >= 0 && x <= WORLD.w && y >= 0 && y <= WORLD.h);
+}
+
+canvas.addEventListener('pointerdown', async (e) => {
+  if (!withinCanvas(e.clientX, e.clientY)) return;
+
+  // 🔊 Desbloquea audio en móvil (Safari/Chrome)
+  if (audioCtx.state === "suspended") {
+    await audioCtx.resume();
+  }
+
+  isDown = true;
+  e.preventDefault();
+  hint.style.display = 'none';
+});
+
+window.addEventListener('pointerup', (e) => {
+  if (!isDown) return;
+  isDown = false;
+  justReleased = true;
+  e.preventDefault();
+});
     // ======== ENTIDADES =========
     const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0, mareo: 0 };
     const sueloScroll = [ { x: 0 }, { x: WORLD.w } ];
@@ -324,7 +365,7 @@
         }
       }
       // Si toca el suelo con demasiada velocidad → mareo
-if (player.y >= sueloTop && Math.abs(player.vy) > 400) {
+if (player.y >= sueloTop && Math.abs(player.vy) > 400 && player.state !== 'mareado') {
   player.state = 'mareado';
   player.mareo = 0;
 }
@@ -356,7 +397,8 @@ if (Math.random() < 0.1) { // probabilidad de spawn cada frame
     y: player.y + rand(-20, 20),
     vx: rand(-15, 15),
     vy: rand(-30, -10),
-    life: 1.0
+    life: 1.0,
+    color: `rgba(255, ${200 + Math.floor(55 * Math.random())}, 255,` // sin alpha aún
   });
 }
 
@@ -443,7 +485,7 @@ for (let i = particles.length - 1; i >= 0; i--) {
       // Partículas zen
 for (const p of particles) {
   const alpha = Math.max(0, p.life);
-  ctx.fillStyle = `rgba(255, ${200 + Math.floor(55 * Math.random())}, 255, ${alpha})`; 
+  ctx.fillStyle = p.color + alpha + ")"; // usamos el color ya creado + alpha actual
   ctx.beginPath();
   ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
   ctx.fill();
