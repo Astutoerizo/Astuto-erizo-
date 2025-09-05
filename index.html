@@ -395,46 +395,34 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
 
   CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
 
+  // Sonido de inhalar rítmico (al empezar y cada 0.5s)
+  if (!wasInhaling) {
+    playSfx("inhalar", 0.25);
+    inhaleSfxTimer = 0;
+  }
+  inhaleSfxTimer += dt;
+  if (inhaleSfxTimer >= INHALE_SFX_INTERVAL) {
+    playSfx("inhalar", 0.25);
+    inhaleSfxTimer = 0;
+  }
+} else {
+  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
+
+  // Si soltó → resetear timer
+  inhaleSfxTimer = 0;
+}
+wasInhaling = isDown && CHARGE.cooldown <= 0;
+
+
+  // Hinchado + pequeña ondulación
+  player.y += Math.sin(performance.now() / 200) * 0.5;
+
+  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+
   // (El sonido de inhalar ya lo gestiona el timer nuevo, no pongas aleatorios aquí)
 } else {
   player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
 }
-
-  // Fuerza hacia arriba (más fuerte si venía cayendo)
-  const boost = (player.vy > 0 ? 1.5 : 1.0);
-  player.vy += PHYSICS.inhaleForce * boost * dt;
-
-  // Hinchado + ondulación
-  player.y += Math.sin(performance.now() / 200) * 0.5;
-
-  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
-       
-
-// Sonido de inhalar rítmico (inmediato al empezar y luego cada 0.5s)
-if (!wasInhaling) {
-  playSfx("inhalar", 0.25);     // feedback instantáneo al empezar a inhalar
-  inhaleSfxTimer = 0;
-}
-inhaleSfxTimer += dt;
-if (inhaleSfxTimer >= INHALE_SFX_INTERVAL) {
-  playSfx("inhalar", 0.25);
-  inhaleSfxTimer = 0;
-  const inhaling = isDown && CHARGE.cooldown <= 0;
-if (!inhaling) {
-  inhaleSfxTimer = 0; // resetea cuando suelta
-}
-wasInhaling = inhaling;
-}
-}
-
-        // Hinchado + pequeña ondulación
-        player.y += Math.sin(performance.now() / 200) * 0.5;
-
-        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
-        if (Math.random() < 0.02) playSfx("carga", 0.35);
-      } else {
-        player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
-      }
 
       player.vy += PHYSICS.gravity * dt;
       if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
