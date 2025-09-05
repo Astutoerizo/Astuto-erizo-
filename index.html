@@ -35,6 +35,11 @@
       display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d;
       font-weight:700; cursor:pointer; user-select:none;
     }
+    .btn.locked {
+      background: #555;
+      color: #aaa;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -67,6 +72,13 @@
     const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
     const PULSE  = { base:120, max:380, life:0.25 };
     const POINTS = { total:0 };
+
+    // ======== DESBLOQUEOS =========
+    let unlocked = {
+      boss: localStorage.getItem("unlockedBoss") === "true",
+      bonus: localStorage.getItem("unlockedBonus") === "true"
+    };
+    let currentMode = "normal"; // modo por defecto
 
     // ======== SONIDOS =========
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -123,53 +135,54 @@
       osc.start();
       osc.stop(audioCtx.currentTime + 2);
     }
-// ======== MÚSICA DE FONDO (archivos) =========
-const MUSIC = {
-  base: "assets/musica_base.mp3",
-  boss: "assets/musica_boss.mp3",
-  bonus: "assets/musica_bonus.mp3",
-};
 
-let musicAudio = null;
-let currentMusic = null;
+    // ======== MÚSICA DE FONDO (archivos) =========
+    const MUSIC = {
+      base: "assets/musica_base.mp3",
+      boss: "assets/musica_boss.mp3",
+      bonus: "assets/musica_bonus.mp3",
+    };
 
-async function playMusic(track, loop = true, volume = 0.5) {
-  const src = MUSIC[track];
-  if (!src) return;
+    let musicAudio = null;
+    let currentMusic = null;
 
-  if (musicAudio) { // parar anterior
-    musicAudio.pause();
-    musicAudio = null;
-  }
-  const audio = new Audio(src);
-  audio.loop = loop;
-  audio.volume = volume;
-  musicAudio = audio;
+    async function playMusic(track, loop = true, volume = 0.5) {
+      const src = MUSIC[track];
+      if (!src) return;
 
-  try {
-    await audio.play(); // puede fallar antes del primer toque (móvil)
-    currentMusic = track;
-  } catch (e) {
-    // Se desbloqueará al primer pointerdown
-    currentMusic = null;
-    console.log("Música esperando interacción del usuario…");
-  }
-}
+      if (musicAudio) { // parar anterior
+        musicAudio.pause();
+        musicAudio = null;
+      }
+      const audio = new Audio(src);
+      audio.loop = loop;
+      audio.volume = volume;
+      musicAudio = audio;
 
-// ======== SONIDOS FX (archivos) =========
-const SFX = {
-  carga: "assets/sonido_carga_intenso.mp3",
-  bowl:  "assets/sonido_bowl_limpio.mp3",
-  plop:  "assets/sonido_plop.mp3",
-};
+      try {
+        await audio.play(); // puede fallar antes del primer toque (móvil)
+        currentMusic = track;
+      } catch (e) {
+        currentMusic = null;
+        console.log("Música esperando interacción del usuario…");
+      }
+    }
 
-function playSfx(name, volume = 1.0) {
-  const src = SFX[name];
-  if (!src) return;
-  const a = new Audio(src);
-  a.volume = volume;
-  a.play().catch(()=>{});
-}
+    // ======== SONIDOS FX (archivos) =========
+    const SFX = {
+      carga: "assets/sonido_carga_intenso.mp3",
+      bowl:  "assets/sonido_bowl_limpio.mp3",
+      plop:  "assets/sonido_plop.mp3",
+    };
+
+    function playSfx(name, volume = 1.0) {
+      const src = SFX[name];
+      if (!src) return;
+      const a = new Audio(src);
+      a.volume = volume;
+      a.play().catch(()=>{});
+    }
+
     // ======== ASSETS =========
     const ASSETS = {
       bg1: "assets/fondo_calc.png",
@@ -216,41 +229,41 @@ function playSfx(name, volume = 1.0) {
     }
     window.addEventListener('resize', fit); fit();
 
-  // ======== INPUT =========
-let isDown = false, justReleased = false;
+    // ======== INPUT =========
+    let isDown = false, justReleased = false;
 
-function withinCanvas(clientX, clientY){
-  const x = (clientX - offsetX) / scale, 
-        y = (clientY - offsetY) / scale;
-  return (x >= 0 && x <= WORLD.w && y >= 0 && y <= WORLD.h);
-}
+    function withinCanvas(clientX, clientY){
+      const x = (clientX - offsetX) / scale, 
+            y = (clientY - offsetY) / scale;
+      return (x >= 0 && x <= WORLD.w && y >= 0 && y <= WORLD.h);
+    }
 
-canvas.addEventListener('pointerdown', async (e) => {
-  if (!withinCanvas(e.clientX, e.clientY)) return;
-  if (audioCtx.state === "suspended") await audioCtx.resume(); // desbloquea WebAudio
+    canvas.addEventListener('pointerdown', async (e) => {
+      if (!withinCanvas(e.clientX, e.clientY)) return;
+      if (audioCtx.state === "suspended") await audioCtx.resume();
 
-  // Primera vez que el jugador toca: iniciar música base si no suena
-  if (!musicAudio || currentMusic === null) {
-    playMusic("base");
-  }
+      if (!musicAudio || currentMusic === null) {
+        playMusic("base");
+      }
 
-  isDown = true; e.preventDefault();
-  hint.style.display = 'none';
-});
+      isDown = true; e.preventDefault();
+      hint.style.display = 'none';
+    });
 
-window.addEventListener('pointerup', (e) => {
-  if (!isDown) return;
-  isDown = false;
-  justReleased = true;
-  e.preventDefault();
-});
+    window.addEventListener('pointerup', (e) => {
+      if (!isDown) return;
+      isDown = false;
+      justReleased = true;
+      e.preventDefault();
+    });
+
     // ======== ENTIDADES =========
     const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0, mareo: 0 };
     const sueloScroll = [ { x: 0 }, { x: WORLD.w } ];
     const obstacles = [];
     const bananas = [];
     const pulses  = [];
-    const particles = []; // {x, y, vx, vy, life}
+    const particles = [];
 
     // ======== UTIL =========
     const rand = (a,b) => a + Math.random()*(b-a);
@@ -291,7 +304,6 @@ window.addEventListener('pointerup', (e) => {
         });
       }
     }
-
     // ======== GAME LOOP =========
     let last = performance.now();
     let dead = false;
@@ -319,6 +331,17 @@ window.addEventListener('pointerup', (e) => {
       panel.classList.remove('show');
       hint.style.display = '';
       initClouds();
+
+      // Cambiar música / dificultad según modo
+      if (currentMode === "normal") {
+        playMusic("base");
+      } else if (currentMode === "boss") {
+        playMusic("boss");
+        SPEED.scroll = 380; // más rápido
+      } else if (currentMode === "bonus") {
+        playMusic("bonus");
+        SPAWN.interval = 2.0; // menos obstáculos
+      }
     }
 
     btnRestart.addEventListener('click', reset);
@@ -329,6 +352,7 @@ window.addEventListener('pointerup', (e) => {
         s.x -= SPEED.scroll * dt;
         if (s.x <= -WORLD.w) s.x += WORLD.w * 2;
       }
+
       // Nubes
       for (const c of CLOUD.list) {
         c.x -= c.speed * dt;
@@ -340,6 +364,7 @@ window.addEventListener('pointerup', (e) => {
           c.img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
         }
       }
+
       // Spawner
       SPAWN.timer += dt; SPAWN.diffTimer += dt;
       if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; spawnObstacle(); }
@@ -348,27 +373,31 @@ window.addEventListener('pointerup', (e) => {
         SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max);
         SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05);
       }
+
       // Input + física
       if (isDown && CHARGE.cooldown <= 0) {
-  player.state = 'inhalando';
+        player.state = 'inhalando';
 
-  // Fuerza hacia arriba (sube mientras está inhalando)
-  player.vy += PHYSICS.inhaleForce * dt;
+        // Fuerza hacia arriba (sube mientras está inhalando)
+        player.vy += PHYSICS.inhaleForce * dt;
 
-  // Hinchado + pequeña ondulación
-  player.y += Math.sin(performance.now() / 200) * 0.5;
+        // Hinchado + pequeña ondulación
+        player.y += Math.sin(performance.now() / 200) * 0.5;
 
-  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
- if (Math.random() < 0.02) playSfx("carga", 0.35);
-} else {
-  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
-}
+        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+        if (Math.random() < 0.02) playSfx("carga", 0.35);
+      } else {
+        player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
+      }
+
       player.vy += PHYSICS.gravity * dt;
       if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
       player.y += player.vy * dt;
+
       const sueloTop = WORLD.h - GROUND_H - player.r;
       if (player.y > sueloTop) { player.y = sueloTop; player.vy = 0; }
       if (player.y < 80) { player.y = 80; player.vy = 0; }
+
       if (justReleased) {
         justReleased = false;
         if (CHARGE.cooldown <= 0) {
@@ -383,52 +412,71 @@ window.addEventListener('pointerup', (e) => {
           }
         }
       }
+
       // Si toca el suelo con demasiada velocidad → mareo
-if (player.y >= sueloTop && Math.abs(player.vy) > 400 && player.state !== 'mareado') {
-  player.state = 'mareado';
-  player.mareo = 0;
-}
+      if (player.y >= sueloTop && Math.abs(player.vy) > 400 && player.state !== 'mareado') {
+        player.state = 'mareado';
+        player.mareo = 0;
+      }
+
       // Acumular mareo al gritar
-if (player.state === 'gritando') {
-  player.mareo += dt;
-  if (player.mareo > 3) { // si grita más de 3 seg seguidos
-    player.state = 'mareado';
-    player.mareo = 0;
-  }
-} else {
-  // se recupera lentamente si no grita
-  if (player.mareo > 0) player.mareo -= dt * 0.5;
-}
-     // Cooldown y estado del erizo
-if (CHARGE.cooldown > 0) {
-  CHARGE.cooldown -= dt;
-  if (CHARGE.cooldown < 0) CHARGE.cooldown = 0;
-}
+      if (player.state === 'gritando') {
+        player.mareo += dt;
+        if (player.mareo > 3) {
+          player.state = 'mareado';
+          player.mareo = 0;
+        }
+      } else {
+        if (player.mareo > 0) player.mareo -= dt * 0.5;
+      }
 
-// Si no estamos pulsando y ya no hay cooldown, vuelve a calmado siempre
-if (!isDown && CHARGE.cooldown === 0) {
-  player.state = 'calmado';
-}
+      // Cooldown y estado del erizo
+      if (CHARGE.cooldown > 0) {
+        CHARGE.cooldown -= dt;
+        if (CHARGE.cooldown < 0) CHARGE.cooldown = 0;
+      }
+
+      // === Desbloqueos ===
+      if (!unlocked.boss && POINTS.total >= 50) {
+        unlocked.boss = true;
+        localStorage.setItem("unlockedBoss", "true");
+        updateMenuButtons();
+        alert("✨ Has desbloqueado el Modo Boss!");
+      }
+
+      if (!unlocked.bonus && POINTS.total >= 75) {
+        unlocked.bonus = true;
+        localStorage.setItem("unlockedBonus", "true");
+        updateMenuButtons();
+        alert("🌸 Has desbloqueado el Modo Bonus!");
+      }
+
+      if (!isDown && CHARGE.cooldown === 0) {
+        player.state = 'calmado';
+      }
+
       // Partículas zen
-if (Math.random() < 0.1) { // probabilidad de spawn cada frame
-  particles.push({
-    x: player.x + rand(-20, 20),
-    y: player.y + rand(-20, 20),
-    vx: rand(-15, 15),
-    vy: rand(-30, -10),
-    life: 1.0,
-    color: `rgba(255, ${200 + Math.floor(55 * Math.random())}, 255,` // sin alpha aún
-  });
-}
+      if (Math.random() < 0.1) {
+        particles.push({
+          x: player.x + rand(-20, 20),
+          y: player.y + rand(-20, 20),
+          vx: rand(-15, 15),
+          vy: rand(-30, -10),
+          life: 1.0,
+          color: `rgba(255, ${200 + Math.floor(55 * Math.random())}, 255,`
+        });
+      }
 
-// Actualizar partículas
-for (let i = particles.length - 1; i >= 0; i--) {
-  const p = particles[i];
-  p.x += p.vx * dt;
-  p.y += p.vy * dt;
-  p.life -= dt * 0.5;
-  if (p.life <= 0) particles.splice(i, 1);
-}
+      // Actualizar partículas
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt * 0.5;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // Pulsos
       for (let i = pulses.length-1; i>=0; i--) {
         const p = pulses[i]; p.life -= dt;
         if (p.life <= 0) { pulses.splice(i,1); continue; }
@@ -439,12 +487,16 @@ for (let i = particles.length - 1; i >= 0; i--) {
           }
         }
       }
+
+      // Obstáculos y bananas
       for (let i = obstacles.length-1; i>=0; i--) {
         const o = obstacles[i]; o.x -= o.speed * dt; if (o.x < -120) obstacles.splice(i,1);
       }
       for (let i = bananas.length-1; i>=0; i--) {
         const b = bananas[i]; b.x -= b.speed * dt; if (b.x < -120) bananas.splice(i,1);
       }
+
+      // Colisiones
       for (let i = obstacles.length-1; i>=0; i--) {
         const o = obstacles[i];
         if (dist2(o.x,o.y,player.x,player.y) <= (o.r+player.r)*(o.r+player.r)) {
@@ -463,124 +515,217 @@ for (let i = particles.length - 1; i >= 0; i--) {
           else { POINTS.total += 1; playPlin(); }
         }
       }
+
       scoreEl.textContent = "Puntos: " + POINTS.total;
       zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
       zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
     }
-
     function draw() {
       ctx.clearRect(0,0,WORLD.w,WORLD.h);
+
+      // Fondo
       if (IMG.bg1) ctx.drawImage(IMG.bg1, 0, 0, WORLD.w, WORLD.h);
-      else { ctx.fillStyle = '#bae6fd'; ctx.fillRect(0,0,WORLD.w,WORLD.h); }
+      else { ctx.fillStyle = '#1b1b1f'; ctx.fillRect(0,0,WORLD.w,WORLD.h); }
+
+      // Nubes por pasadas (parallax)
       for (let pass = 0; pass < 3; pass++){
         for (const c of CLOUD.list){
           if (c.band !== pass) continue;
           if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
           else {
             ctx.fillStyle='rgba(255,255,255,.85)';
-            ctx.beginPath(); ctx.ellipse(c.x+c.w/2,c.y+c.h/2,c.w/2,c.h/3,0,0,Math.PI*2); ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(c.x+c.w/2,c.y+c.h/2,c.w/2,c.h/3,0,0,Math.PI*2);
+            ctx.fill();
           }
         }
       }
+
+      // Coleccionables
       for (const b of bananas) {
-        if (b.kind === 'cuenco' && IMG.cuenco) ctx.drawImage(IMG.cuenco, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
-        else if (IMG.banana) ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
-        else { ctx.fillStyle='#facc15'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); }
+        if (b.kind === 'cuenco' && IMG.cuenco) {
+          ctx.drawImage(IMG.cuenco, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
+        } else if (IMG.banana) {
+          ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
+        } else {
+          ctx.fillStyle='#facc15';
+          ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+        }
       }
+
+      // Obstáculos
       for (const o of obstacles) {
         const img = IMG.obstaculos[o.kind] || null;
         if (img) ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
-        else { ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill(); }
+        else {
+          ctx.fillStyle='#ef4444';
+          ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
+        }
       }
+
+      // Pulsos
       for (const p of pulses) {
         const alpha = Math.max(0, p.life / PULSE.life);
-        ctx.strokeStyle = `rgba(99,102,241,${alpha})`; ctx.lineWidth=6;
+        ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
+        ctx.lineWidth=6;
         ctx.beginPath(); ctx.arc(p.x,p.y,p.rad,0,Math.PI*2); ctx.stroke();
       }
+
+      // Suelo
       for (let s of sueloScroll) {
         if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
         else { ctx.fillStyle='#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); }
       }
+
       // Partículas zen
-for (const p of particles) {
-  const alpha = Math.max(0, p.life);
-  ctx.fillStyle = p.color + alpha + ")"; // usamos el color ya creado + alpha actual
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
-  ctx.fill();
-}
-        // Aura zen (debajo del erizo)
-  const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300); // efecto latido
-  ctx.fillStyle = `rgba(255,255,255,${0.25 * pulse})`;
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, 60, 0, Math.PI*2); // círculo alrededor del erizo
-  ctx.fill();
-     const erizoImg =
-  (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
-  (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
-  IMG.erizo.calmado;
+      for (const p of particles) {
+        const alpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color + alpha + ")"; // color base + alpha dinámico
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+      }
 
-// Si está mareado → giramos el sprite y le ponemos “estrellitas”
-if (player.state === 'mareado') {
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  ctx.rotate(Math.sin(performance.now()/200) * 0.3); // cabeceo
-  ctx.drawImage(erizoImg, -40, -40, 80, 80);
-  ctx.restore();
+      // Aura zen
+      const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300);
+      ctx.fillStyle = `rgba(255,255,255,${0.25 * pulse})`;
+      ctx.beginPath(); ctx.arc(player.x, player.y, 60, 0, Math.PI*2); ctx.fill();
 
-  // Estrellitas
-  ctx.fillStyle = 'yellow';
-  ctx.beginPath(); ctx.arc(player.x-20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(player.x+20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
-  return; // saltamos el resto para no dibujar encima
-}
+      // Sprite del erizo
+      const erizoImg =
+        (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando :
+        (player.state==='gritando'  && IMG.erizo.gritando)  ? IMG.erizo.gritando  :
+        IMG.erizo.calmado;
+
+      // Estado mareado: cabeceo y estrellitas
+      if (player.state === 'mareado') {
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(Math.sin(performance.now()/200) * 0.3);
+        if (erizoImg) ctx.drawImage(erizoImg, -40, -40, 80, 80);
+        else {
+          ctx.fillStyle='#8b5cf6'; ctx.beginPath(); ctx.arc(0,0,player.r,0,Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath(); ctx.arc(player.x-20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(player.x+20, player.y-50, 6, 0, Math.PI*2); ctx.fill();
+        return; // no dibujar extras encima
+      }
+
+      // Escala según estado
       const t = performance.now() / 300;
       let erizoScale = 1;
       if (player.state === 'calmado') erizoScale = 1 + 0.02 * Math.sin(t);
       else if (player.state === 'inhalando') erizoScale = 1.3;
       else if (player.state === 'gritando') erizoScale = 0.9;
-     if (erizoImg) {
-  const s = 80 * erizoScale; // tamaño destino
-  ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
 
-  // Patitas/brazos (detalles simples)
-  const t2 = performance.now() / 200;
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 3;
+      if (erizoImg) {
+        const s = 80 * erizoScale;
+        ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
 
-  // Brazos
-  ctx.beginPath();
-  ctx.moveTo(player.x - s*0.3, player.y);
-  ctx.lineTo(player.x - s*0.3 - 6*Math.sin(t2), player.y + 10);
-  ctx.moveTo(player.x + s*0.3, player.y);
-  ctx.lineTo(player.x + s*0.3 + 6*Math.sin(t2), player.y + 10);
-  ctx.stroke();
+        // Detallitos: brazos y patitas
+        const t2 = performance.now() / 200;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
 
-  // Patitas
-  ctx.beginPath();
-  ctx.moveTo(player.x - s*0.2, player.y + s*0.4);
-  ctx.lineTo(player.x - s*0.2, player.y + s*0.4 + 6*Math.cos(t2));
-  ctx.moveTo(player.x + s*0.2, player.y + s*0.4);
-  ctx.lineTo(player.x + s*0.2, player.y + s*0.4 + 6*Math.cos(t2));
-  ctx.stroke();
+        // Brazos
+        ctx.beginPath();
+        ctx.moveTo(player.x - s*0.3, player.y);
+        ctx.lineTo(player.x - s*0.3 - 6*Math.sin(t2), player.y + 10);
+        ctx.moveTo(player.x + s*0.3, player.y);
+        ctx.lineTo(player.x + s*0.3 + 6*Math.sin(t2), player.y + 10);
+        ctx.stroke();
+
+        // Patitas
+        ctx.beginPath();
+        ctx.moveTo(player.x - s*0.2, player.y + s*0.4);
+        ctx.lineTo(player.x - s*0.2, player.y + s*0.4 + 6*Math.cos(t2));
+        ctx.moveTo(player.x + s*0.2, player.y + s*0.4);
+        ctx.lineTo(player.x + s*0.2, player.y + s*0.4 + 6*Math.cos(t2));
+        ctx.stroke();
       } else {
-        ctx.fillStyle='#8b5cf6'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#8b5cf6';
+        ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
       }
     }
 
+    // ======== BUCLE PRINCIPAL =========
+    let last = performance.now();
+    let started = false;
+
     function frame(now) {
-      const dt = Math.min(0.033, (now - last) / 1000); last = now;
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
       if (!dead) update(dt);
       draw();
       requestAnimationFrame(frame);
     }
 
-    let started = false;
-    function start(){ if (started) return; started = true; reset(); requestAnimationFrame(frame); }
+    function start(){
+      if (started) return;
+      started = true;
+      reset();
+      requestAnimationFrame(frame);
+    }
+
+    // Carga de recursos y arranque
     loadAll().then(start);
+
+    // Botones de menú/modal y desbloqueos visuales
+    function updateMenuButtons() {
+      const bossBtn  = document.getElementById("btnBoss");
+      const bonusBtn = document.getElementById("btnBonus");
+      if (bossBtn && unlocked.boss)  bossBtn.classList.remove("locked");
+      if (bonusBtn && unlocked.bonus) bonusBtn.classList.remove("locked");
+    }
+    updateMenuButtons();
+
+    // Asegurar arranque incluso si tarda en cargar algo
     setTimeout(start, 2500);
+
+    // Listeners de selección de modo
+    const btnNormal = document.getElementById("btnNormal");
+    const btnBoss   = document.getElementById("btnBoss");
+    const btnBonus  = document.getElementById("btnBonus");
+    const menuPanel = document.getElementById("menuPanel");
+
+    if (btnNormal) btnNormal.addEventListener("click", () => {
+      currentMode = "normal";
+      if (menuPanel) menuPanel.classList.remove("show");
+      reset();
+    });
+
+    if (btnBoss) btnBoss.addEventListener("click", () => {
+      if (!unlocked.boss) return;
+      currentMode = "boss";
+      if (menuPanel) menuPanel.classList.remove("show");
+      reset();
+    });
+
+    if (btnBonus) btnBonus.addEventListener("click", () => {
+      if (!unlocked.bonus) return;
+      currentMode = "bonus";
+      if (menuPanel) menuPanel.classList.remove("show");
+      reset();
+    });
+
   })();
   </script>
+
+  <!-- ======== PANEL DE MENÚ INICIAL ========= -->
+  <div class="panel show" id="menuPanel">
+    <div class="card">
+      <h2>Astuto Erizo</h2>
+      <p>Elige tu camino zen:</p>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="btn" id="btnNormal">Modo Normal</div>
+        <div class="btn locked" id="btnBoss">Modo Boss (50 pts)</div>
+        <div class="btn locked" id="btnBonus">Modo Bonus (75 pts)</div>
+      </div>
+      <p style="opacity:.7; font-size:12px; margin-top:10px;">
+        Mantén pulsado para inhalar · Suelta para gritar
+      </p>
+    </div>
+  </div>
 </body>
 </html>
-
