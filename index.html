@@ -1,1 +1,264 @@
-<!doctype html> <html lang="es"> <head> <meta charset="utf-8" /> <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"> <title>Astuto Erizo - Respira y Grita</title> <style> html, body { margin:0; height:100%; background:#0e0e10; color:#fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; } #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; } canvas { background:#1b1b1f; touch-action:none; } .hud { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); width: min(92vw, 540px); pointer-events:none; display:flex; align-items:center; gap:12px; justify-content:space-between; font-weight:600; } .bar { flex:1; height:14px; background:#3a3a44; border-radius:999px; overflow:hidden; border:2px solid #6ee7b7; box-shadow:0 0 6px rgba(110,231,183,0.6) inset; } .fill { height:100%; width:0%; background:#86efac; transition: width .08s linear; } .cooldown { opacity:.45; } .score { min-width:120px; text-align:right; } .toast { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9; } .panel { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .2s ease; } .panel.show { opacity:1; pointer-events:auto; } .card { background:#1e1e24; border:1px solid #333; border-radius:16px; padding:20px; width:min(92vw, 420px); text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,.35); } .btn { display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d; font-weight:700; cursor:pointer; user-select:none; } </style> </head> <body> <div id="wrap"> <canvas id="game" width="540" height="960"></canvas> </div> <div class="hud"> <div class="bar"><div class="fill" id="zenFill"></div></div> <div class="score" id="score">Puntos: 0</div> </div> <div class="panel" id="panel"> <div class="card"> <h2>Astuto Erizo</h2> <p id="panelMsg">Has gritado al vacío zen…</p> <div class="btn" id="btnRestart">Reintentar</div> <p style="opacity:.7; font-size:12px; margin-top:8px;">Mantén pulsado para inhalar · Suelta para gritar</p> </div> </div> <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div> <script> (() => { // ======== CONFIG GENERAL ========= const WORLD = { w: 540, h: 960 }; const SPEED = { scroll: 280, inc: 20, max: 520 }; const SPAWN = { interval: 1.2, min: 0.7, timer: 0, diffTimer: 0 }; const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 }; const PULSE = { base:120, max:380, life:0.25 }; const POINTS = { total:0 }; // ======== SONIDOS ========= const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); function playInhalar() { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = "sine"; osc.frequency.setValueAtTime(120, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1); gain.gain.setValueAtTime(0.08, audioCtx.currentTime); osc.connect(gain).connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 1); } function playGrito() { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = "square"; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3); osc.connect(gain).connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.3); } function playPlin() { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = "triangle"; osc.frequency.setValueAtTime(880, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.15); gain.gain.setValueAtTime(0.15, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15); osc.connect(gain).connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15); } function playGong() { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = "sine"; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 2); gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2); osc.connect(gain).connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 2); } // ======== ASSETS ========= const ASSETS = { bg1: "assets/fondo_calc.png", bg2: "assets/fondo_desierto.png", erizo: { calmado: "assets/calmado.png", inhalando:"assets/respirando.png", gritando: "assets/gritando.png" }, obstaculos: [ "assets/paraguas.png", "assets/helado_meditando.png" ], banana: "assets/platano_puntos.png", suelo: "assets/suelo.png", cuenco: "assets/cuenco_tibetano.png", nubes: [ "assets/nubes/nube1.png", "assets/nubes/nube2.png", "assets/nubes/nube3.png", "assets/nubes/nube4.png" ] }; // ======== CANVAS ========= const canvas = document.getElementById('game'); const ctx = canvas.getContext('2d'); const zenFill = document.getElementById('zenFill'); const scoreEl = document.getElementById('score'); const panel = document.getElementById('panel'); const panelMsg = document.getElementById('panelMsg'); const btnRestart = document.getElementById('btnRestart'); const hint = document.getElementById('hint'); const PHYSICS = { gravity: 600, inhaleForce: -900, maxVy: 500 }; const GROUND_H = 180; let scale = 1, offsetX = 0, offsetY = 0; function fit() { const vw = window.innerWidth, vh = window.innerHeight; const s = Math.min(vw / WORLD.w, vh / WORLD.h); scale = s; offsetX = (vw - WORLD.w * s)/2; offsetY = (vh - WORLD.h * s)/2; canvas.style.width = WORLD.w * s + 'px'; canvas.style.height = WORLD.h * s + 'px'; } window.addEventListener('resize', fit); fit(); // ======== INPUT ========= let isDown = false, justReleased = false; function withinCanvas(clientX, clientY){ const x = (clientX - offsetX) / scale, y = (clientY - offsetY) / scale; return (x>=0 && x<=WORLD.w && y>=0 && y<=WORLD.h); } canvas.addEventListener('pointerdown', (e) => { if (!withinCanvas(e.clientX, e.clientY)) return; isDown = true; e.preventDefault(); hint.style.display = 'none'; }); window.addEventListener('pointerup', (e) => { if (!isDown) return; isDown = false; justReleased = true; e.preventDefault(); }); // ======== ENTIDADES ========= const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0, mareo: 0 }; const sueloScroll = [ { x: 0 }, { x: WORLD.w } ]; const obstacles = []; const bananas = []; const pulses = []; const particles = []; // {x, y, vx, vy, life} // ======== UTIL ========= const rand = (a,b) => a + Math.random()*(b-a); const chance = (p) => Math.random() < p; function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; } // ======== IMÁGENES ========= const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[] }; function loadImage(src){ return new Promise(res => { if(!src){res(null); return;} const im=new Image(); im.onload=()=>res(im); im.onerror = () => res(null); im.src=src; }); } async function loadAll() { IMG.bg1 = await loadImage(ASSETS.bg1); IMG.bg2 = await loadImage(ASSETS.bg2); IMG.erizo.calmado = await loadImage(ASSETS.erizo.calmado); IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando); IMG.erizo.gritando = await loadImage(ASSETS.erizo.gritando); for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src)); IMG.banana = await loadImage(ASSETS.banana); IMG.suelo = await loadImage(ASSETS.suelo); IMG.cuenco = await loadImage(ASSETS.cuenco); for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src)); } // ======== NUBES ========= const CLOUD = { list: [] }; function initClouds() { CLOUD.list = []; for (let i = 0; i < 10; i++) { const band = Math.floor(rand(0,3)); const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null; CLOUD.list.push({ x: rand(0, WORLD.w), y: rand(50, WORLD.h/2), w: rand(80, 180), h: rand(50, 100), speed: 20 + band * 40, band, img }); } } // ======== GAME LOOP ========= let last = performance.now(); let dead = false; function spawnObstacle() { const y = rand(240, WORLD.h-180); const r = rand(44, 70); const speed = Math.min(SPEED.scroll + rand(0,60), SPEED.max); obstacles.push({ x: WORLD.w + 60, y, r, speed, kind: Math.floor(rand(0, IMG.obstaculos.length)) }); if (chance(0.30)) { bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 44, speed: speed+40, kind: 'banana' }); } if (chance(0.10)) { bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h-200), r: 44, speed: speed+20, kind: 'cuenco' }); } } function reset() { POINTS.total = 0; CHARGE.value = 0; CHARGE.cooldown = 0; SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer=0; SPAWN.diffTimer=0; obstacles.length = 0; bananas.length = 0; pulses.length = 0; player.y = WORLD.h - GROUND_H - player.r + 20; player.state='calmado'; dead = false; panel.classList.remove('show'); hint.style.display = ''; initClouds(); } btnRestart.addEventListener('click', reset); function update(dt) { // Suelo for (let s of sueloScroll) { s.x -= SPEED.scroll * dt; if (s.x <= -WORLD.w) s.x += WORLD.w * 2; } // Nubes for (const c of CLOUD.list) { c.x -= c.speed * dt; if (c.x + c.w < 0) { c.x = WORLD.w + rand(10, 100); c.y = rand(50, WORLD.h/2); c.w = rand(80, 180); c.h = rand(50, 100); c.img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null; } } // Spawner SPAWN.timer += dt; SPAWN.diffTimer += dt; if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; spawnObstacle(); } if (SPAWN.diffTimer >= 10) { SPAWN.diffTimer = 0; SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max); SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05); } // Input + física if (isDown && CHARGE.cooldown <= 0) { player.state = 'inhalando'; // Fuerza hacia arriba (sube mientras está inhalando) player.vy += PHYSICS.inhaleForce * dt; // Hinchado + pequeña ondulación player.y += Math.sin(performance.now() / 200) * 0.5; CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); if (Math.random() < 0.02) playInhalar(); } else { player.state = (player.state === 'gritando') ? 'gritando' : 'calmado'; } player.vy += PHYSICS.gravity * dt; if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy; player.y += player.vy * dt; const sueloTop = WORLD.h - GROUND_H - player.r; if (player.y > sueloTop) { player.y = sueloTop; player.vy = 0; } if (player.y < 80) { player.y = 80; player.vy = 0; } if (justReleased) { justReleased = false; if (CHARGE.cooldown <= 0) { if (CHARGE.value >= CHARGE.over) { CHARGE.cooldown = 0.7; CHARGE.value = 0; player.state = 'gritando'; } else { const t = CHARGE.value / CHARGE.max; const rad = PULSE.base + t * (PULSE.max - PULSE.base); pulses.push({ x: player.x+40, y: player.y, rad, life: PULSE.life }); CHARGE.cooldown = CHARGE.cooldownBase; CHARGE.value = 0; player.state = 'gritando'; playGrito(); } } } // Si toca el suelo con demasiada velocidad → mareo if (player.y >= sueloTop && Math.abs(player.vy) > 400) { player.state = 'mareado'; player.mareo = 0; } // Acumular mareo al gritar if (player.state === 'gritando') { player.mareo += dt; if (player.mareo > 3) { // si grita más de 3 seg seguidos player.state = 'mareado'; player.mareo = 0; } } else { // se recupera lentamente si no grita if (player.mareo > 0) player.mareo -= dt * 0.5; } // Cooldown y estado del erizo if (CHARGE.cooldown > 0) { CHARGE.cooldown -= dt; if (CHARGE.cooldown < 0) CHARGE.cooldown = 0; } // Si no estamos pulsando y ya no hay cooldown, vuelve a calmado siempre if (!isDown && CHARGE.cooldown === 0) { player.state = 'calmado'; } // Partículas zen if (Math.random() < 0.1) { // probabilidad de spawn cada frame particles.push({ x: player.x + rand(-20, 20), y: player.y + rand(-20, 20), vx: rand(-15, 15), vy: rand(-30, -10), life: 1.0 }); } // Actualizar partículas for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 0.5; if (p.life <= 0) particles.splice(i, 1); } for (let i = pulses.length-1; i>=0; i--) { const p = pulses[i]; p.life -= dt; if (p.life <= 0) { pulses.splice(i,1); continue; } for (let j = obstacles.length-1; j>=0; j--) { const o = obstacles[j]; if (dist2(p.x,p.y,o.x,o.y) <= (p.rad+o.r)*(p.rad+o.r)) { obstacles.splice(j,1); POINTS.total += 2; } } } for (let i = obstacles.length-1; i>=0; i--) { const o = obstacles[i]; o.x -= o.speed * dt; if (o.x < -120) obstacles.splice(i,1); } for (let i = bananas.length-1; i>=0; i--) { const b = bananas[i]; b.x -= b.speed * dt; if (b.x < -120) bananas.splice(i,1); } for (let i = obstacles.length-1; i>=0; i--) { const o = obstacles[i]; if (dist2(o.x,o.y,player.x,player.y) <= (o.r+player.r)*(o.r+player.r)) { dead = true; panelMsg.textContent = (Math.random() < .5) ? "El erizo se quedó sin aire… como tus plantas en agosto." : "Has gritado al vacío. El vacío gritó de vuelta."; panel.classList.add('show'); } } for (let i = bananas.length-1; i>=0; i--) { const b = bananas[i]; if (dist2(b.x,b.y,player.x,player.y) <= (b.r+player.r)*(b.r+player.r)) { bananas.splice(i,1); if (b.kind === 'cuenco') { POINTS.total += 5; playGong(); } else { POINTS.total += 1; playPlin(); } } } scoreEl.textContent = "Puntos: " + POINTS.total; zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%"; zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0); } function draw() { ctx.clearRect(0,0,WORLD.w,WORLD.h); if (IMG.bg1) ctx.drawImage(IMG.bg1, 0, 0, WORLD.w, WORLD.h); else { ctx.fillStyle = '#bae6fd'; ctx.fillRect(0,0,WORLD.w,WORLD.h); } for (let pass = 0; pass < 3; pass++){ for (const c of CLOUD.list){ if (c.band !== pass) continue; if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h); else { ctx.fillStyle='rgba(255,255,255,.85)'; ctx.beginPath(); ctx.ellipse(c.x+c.w/2,c.y+c.h/2,c.w/2,c.h/3,0,0,Math.PI*2); ctx.fill(); } } } for (const b of bananas) { if (b.kind === 'cuenco' && IMG.cuenco) ctx.drawImage(IMG.cuenco, b.x-b.r, b.y-b.r, b.r*2, b.r*2); else if (IMG.banana) ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2); else { ctx.fillStyle='#facc15'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); } } for (const o of obstacles) { const img = IMG.obstaculos[o.kind] || null; if (img) ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2); else { ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill(); } } for (const p of pulses) { const alpha = Math.max(0, p.life / PULSE.life); ctx.strokeStyle = rgba(99,102,241,${alpha}); ctx.lineWidth=6; ctx.beginPath(); ctx.arc(p.x,p.y,p.rad,0,Math.PI*2); ctx.stroke(); } for (let s of sueloScroll) { if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); else { ctx.fillStyle='#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); } } // Partículas zen for (const p of particles) { const alpha = Math.max(0, p.life); ctx.fillStyle = rgba(255, ${200 + Math.floor(55 * Math.random())}, 255, ${alpha}); ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill(); } // Aura zen (debajo del erizo) const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300); // efecto latido ctx.fillStyle = rgba(255,255,255,${0.25 * pulse}); ctx.beginPath(); ctx.arc(player.x, player.y, 60, 0, Math.PI*2); // círculo alrededor del erizo ctx.fill(); const erizoImg = (player.state==='inhalando' && IMG.erizo.inhalando) ? IMG.erizo.inhalando : (player.state==='gritando' && IMG.erizo.gritando) ? IMG.erizo.gritando : IMG.erizo.calmado; // Si está mareado → giramos el sprite y le ponemos “estrellitas” if (player.state === 'mareado') { ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(Math.sin(performance.now()/200) * 0.3); // cabeceo ctx.drawImage(erizoImg, -40, -40, 80, 80); ctx.restore(); // Estrellitas ctx.fillStyle = 'yellow'; ctx.beginPath(); ctx.arc(player.x-20, player.y-50, 6, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(player.x+20, player.y-50, 6, 0, Math.PI*2); ctx.fill(); return; // saltamos el resto para no dibujar encima } const t = performance.now() / 300; let scale = 1; if (player.state === 'calmado') scale = 1 + 0.02 * Math.sin(t); else if (player.state === 'inhalando') scale = 1.3; else if (player.state === 'gritando') scale = 0.9; if (erizoImg) { const s = 80 * scale; // tamaño destino ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s); // Patitas/brazos (detalles simples) const t2 = performance.now() / 200; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; // Brazos ctx.beginPath(); ctx.moveTo(player.x - s*0.3, player.y); ctx.lineTo(player.x - s*0.3 - 6*Math.sin(t2), player.y + 10); ctx.moveTo(player.x + s*0.3, player.y); ctx.lineTo(player.x + s*0.3 + 6*Math.sin(t2), player.y + 10); ctx.stroke(); // Patitas ctx.beginPath(); ctx.moveTo(player.x - s*0.2, player.y + s*0.4); ctx.lineTo(player.x - s*0.2, player.y + s*0.4 + 6*Math.cos(t2)); ctx.moveTo(player.x + s*0.2, player.y + s*0.4); ctx.lineTo(player.x + s*0.2, player.y + s*0.4 + 6*Math.cos(t2)); ctx.stroke(); } else { ctx.fillStyle='#8b5cf6'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill(); } } function frame(now) { const dt = Math.min(0.033, (now - last) / 1000); last = now; if (!dead) update(dt); draw(); requestAnimationFrame(frame); } let started = false; function start(){ if (started) return; started = true; reset(); requestAnimationFrame(frame); } loadAll().then(start); setTimeout(start, 2500); })(); </script> </body> </html>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Astuto Erizo - Respira y Grita</title>
+  <style>
+    html, body { margin:0; height:100%; background:#0e0e10; color:#fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+    canvas { background:#1b1b1f; touch-action:none; }
+    .hud {
+      position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+      width: min(92vw, 540px); pointer-events:none;
+      display:flex; align-items:center; gap:12px; justify-content:space-between;
+      font-weight:600;
+    }
+    .bar { flex:1; height:14px; background:#3a3a44; border-radius:999px; overflow:hidden; border:2px solid #6ee7b7; box-shadow:0 0 6px rgba(110,231,183,0.6) inset; }
+    .fill { height:100%; width:0%; background:#86efac; transition: width .08s linear; }
+    .cooldown { opacity:.45; }
+    .score { min-width:120px; text-align:right; }
+    .toast {
+      position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+      background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9;
+    }
+    .panel {
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.45); transition:opacity .2s ease;
+    }
+    .panel.show {
+      display:flex;
+      opacity:1;
+      pointer-events:auto;
+    }
+    .card {
+      background:#1e1e24; border:1px solid #333; border-radius:16px; padding:20px; width:min(92vw, 420px); text-align:center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .btn {
+      display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d;
+      font-weight:700; cursor:pointer; user-select:none;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="540" height="960"></canvas>
+  </div>
+
+  <div class="hud">
+    <div class="bar"><div class="fill" id="zenFill"></div></div>
+    <div class="score" id="score">Puntos: 0</div>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="card">
+      <h2>Astuto Erizo</h2>
+      <p id="panelMsg">Has gritado al vacío zen…</p>
+      <div class="btn" id="btnRestart">Reintentar</div>
+      <p style="opacity:.7; font-size:12px; margin-top:8px;">Mantén pulsado para inhalar · Suelta para gritar</p>
+    </div>
+  </div>
+
+  <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div>
+
+  <script>
+  (() => {
+    // ======== CONFIG GENERAL =========
+    const WORLD = { w: 540, h: 960 };
+    const SPEED = { scroll: 280, inc: 20, max: 520 };
+    const SPAWN = { interval: 1.2, min: 0.7, timer: 0, diffTimer: 0 };
+    const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
+    const PULSE  = { base:120, max:380, life:0.25 };
+    const POINTS = { total:0 };
+    const PHYSICS = { gravity: 600, inhaleForce: -900, maxVy: 500 };
+    const GROUND_H = 180;
+
+    const CRASH_MESSAGES = [
+      "El erizo se quedó sin aire… como tus plantas en agosto.",
+      "Has gritado al vacío. El vacío gritó de vuelta.",
+      "Chocaste contra la iluminación… pero era un helado.",
+      "Tu zen se fue por el paraguas roto.",
+      "El universo respondió con un plátano invisible.",
+      "Erizo y obstáculo se fundieron en un abrazo incómodo.",
+      "La serenidad se tropezó contigo.",
+      "Has visto la luz... y duele.",
+      "Un pato de goma presenció tu derrota."
+    ];
+
+    // ======== AUDIO =========
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const SFX = {
+      grito: "assets/sonido_bowl_limpio.mp3",
+      recolectar: "assets/sonido_recolectar_platano.mp3",
+      inhalar: "assets/sonido_inhalar.mp3",
+      chocar: "assets/sonido_chocar.mp3",
+    };
+    function playSfx(name, volume = 1.0) {
+      const src = SFX[name]; if (!src) return;
+      const a = new Audio(src); a.volume = volume;
+      a.play().catch(()=>{});
+    }
+
+    // ======== ASSETS =========
+    const ASSETS = {
+      bg: "assets/fondo_calc.png",
+      erizo: {
+        calmado:   "assets/calmado.png",
+        inhalando:"assets/respirando.png",
+        gritando: "assets/gritando.png"
+      },
+      obstaculos: [
+        "assets/paraguas.png",
+        "assets/helado_meditando.png"
+      ],
+      banana: "assets/platano_puntos.png",
+      suelo: "assets/suelo.png",
+      cuenco: "assets/cuenco_tibetano.png",
+      nubes: [
+        "assets/nubes/nube1.png",
+        "assets/nubes/nube2.png",
+        "assets/nubes/nube3.png",
+        "assets/nubes/nube4.png"
+      ]
+    };
+
+    // ======== CANVAS & DOM =========
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const zenFill = document.getElementById('zenFill');
+    const scoreEl = document.getElementById('score');
+    const panel = document.getElementById('panel');
+    const panelMsg = document.getElementById('panelMsg');
+    const btnRestart = document.getElementById('btnRestart');
+    const hint = document.getElementById('hint');
+
+    let scale = 1, offsetX = 0, offsetY = 0;
+    function fit() {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const s = Math.min(vw / WORLD.w, vh / WORLD.h);
+      scale = s; offsetX = (vw - WORLD.w * s)/2; offsetY = (vh - WORLD.h * s)/2;
+      canvas.style.width = WORLD.w * s + 'px';
+      canvas.style.height = WORLD.h * s + 'px';
+    }
+    window.addEventListener('resize', fit); fit();
+
+    // ======== INPUT =========
+    let isDown = false, justReleased = false, wasInhaling = false;
+    let inhaleSfxTimer = 0;
+    function withinCanvas(clientX, clientY){
+      const x = (clientX - offsetX) / scale, y = (clientY - offsetY) / scale;
+      return (x >= 0 && x <= WORLD.w && y >= 0 && y <= WORLD.h);
+    }
+    canvas.addEventListener('pointerdown', async (e) => {
+      if (!withinCanvas(e.clientX, e.clientY)) return;
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      isDown = true; e.preventDefault(); hint.style.display = 'none';
+    });
+    window.addEventListener('pointerup', (e) => {
+      if (!isDown) return;
+      isDown = false; justReleased = true; e.preventDefault();
+    });
+
+    // ======== ENTIDADES =========
+    const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0, mareo: 0 };
+    const sueloScroll = [ { x: 0 }, { x: WORLD.w } ];
+    const obstacles = [], bananas = [], pulses = [], particles = [];
+    const CLOUD = { list: [] };
+
+    // ======== UTIL =========
+    const rand = (a,b) => a + Math.random()*(b-a);
+    const chance = (p) => Math.random() < p;
+    function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
+
+    // ======== IMÁGENES =========
+    const IMG = { bg:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[] };
+    function loadImage(src){ return new Promise(res => { const im = new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; }); }
+    async function loadAll() {
+      IMG.bg = await loadImage(ASSETS.bg);
+      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
+      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
+      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
+      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
+      IMG.banana = await loadImage(ASSETS.banana);
+      IMG.suelo  = await loadImage(ASSETS.suelo);
+      IMG.cuenco = await loadImage(ASSETS.cuenco);
+      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
+    }
+
+    // ======== NUBES =========
+    function initClouds() {
+      CLOUD.list = [];
+      for (let i = 0; i < 10; i++) {
+        const band = Math.floor(rand(0,3));
+        const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
+        CLOUD.list.push({ x: rand(0, WORLD.w), y: rand(50, WORLD.h/2), w: rand(80, 180), h: rand(50, 100), speed: 20 + band*40, band, img });
+      }
+    }
+
+    // ======== RESET =========
+    function reset() {
+      POINTS.total = 0; CHARGE.value = 0; CHARGE.cooldown = 0;
+      SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer = 0; SPAWN.diffTimer = 0;
+      obstacles.length = 0; bananas.length = 0; pulses.length = 0; particles.length = 0;
+      player.y = WORLD.h - GROUND_H - player.r + 20; player.vy = 0; player.state = 'calmado'; player.mareo = 0;
+      panel.classList.remove('show'); hint.style.display = '';
+      initClouds();
+    }
+    btnRestart.addEventListener('click', reset);
+
+    // ======== UPDATE =========
+    function update(dt) {
+      for (let s of sueloScroll) { s.x -= SPEED.scroll * dt; if (s.x <= -WORLD.w) s.x += WORLD.w * 2; }
+      for (const c of CLOUD.list) { c.x -= c.speed * dt; if (c.x + c.w < 0) { c.x = WORLD.w+rand(10,100); c.y = rand(50, WORLD.h/2); } }
+      SPAWN.timer += dt; SPAWN.diffTimer += dt;
+      if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; obstacles.push({ x: WORLD.w+60, y: rand(240, WORLD.h-180), r: rand(44,70), speed: Math.min(SPEED.scroll+rand(0,60), SPEED.max), kind: Math.floor(rand(0, IMG.obstaculos.length)) }); if (chance(0.3)) bananas.push({ x: WORLD.w+100, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+40, kind:'banana' }); if (chance(0.1)) bananas.push({ x: WORLD.w+150, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+20, kind:'cuenco' }); }
+      if (SPAWN.diffTimer >= 10) { SPAWN.diffTimer = 0; SPEED.scroll = Math.min(SPEED.scroll+SPEED.inc, SPEED.max); SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval-0.05); }
+
+      if (isDown && CHARGE.cooldown <= 0) {
+        player.state='inhalando';
+        if (player.vy > 220) player.vy *= 0.5;
+        const boost = (player.vy>0?1.5:1.0); player.vy += PHYSICS.inhaleForce*boost*dt;
+        CHARGE.value=Math.min(CHARGE.max, CHARGE.value+CHARGE.rate*dt);
+        if (!wasInhaling) { playSfx("inhalar",0.25); inhaleSfxTimer=0; } else { inhaleSfxTimer+=dt; if (inhaleSfxTimer>=0.5){ playSfx("inhalar",0.25); inhaleSfxTimer=0; } }
+      }
+      wasInhaling=isDown&&CHARGE.cooldown<=0;
+
+      player.vy+=PHYSICS.gravity*dt; if(player.vy>PHYSICS.maxVy) player.vy=PHYSICS.maxVy; player.y+=player.vy*dt;
+      const sueloTop=WORLD.h-GROUND_H-player.r; if(player.y>sueloTop){player.y=sueloTop;player.vy=0;} if(player.y<80){player.y=80;player.vy=0;}
+      if(justReleased){justReleased=false;if(CHARGE.cooldown<=0){if(CHARGE.value>=CHARGE.over){CHARGE.cooldown=0.7;CHARGE.value=0;player.state='gritando';}else{const t=CHARGE.value/CHARGE.max;const rad=PULSE.base+t*(PULSE.max-PULSE.base);pulses.push({x:player.x+40,y:player.y,rad,life:PULSE.life});CHARGE.cooldown=CHARGE.cooldownBase;CHARGE.value=0;player.state='gritando';playSfx("grito",0.9);}} inhaleSfxTimer=0;}
+      if(CHARGE.cooldown>0){CHARGE.cooldown-=dt;if(CHARGE.cooldown<0)CHARGE.cooldown=0;}
+      if(!isDown&&CHARGE.cooldown===0&&player.state!=='mareado')player.state='calmado';
+
+      if(Math.random()<0.1){particles.push({x:player.x+rand(-20,20),y:player.y+rand(-20,20),vx:rand(-15,15),vy:rand(-30,-10),life:1.0,color:`rgba(255,${200+Math.floor(55*Math.random())},255,`});}
+      for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt*0.5;if(p.life<=0)particles.splice(i,1);}
+      for(let i=pulses.length-1;i>=0;i--){const p=pulses[i];p.life-=dt;if(p.life<=0){pulses.splice(i,1);continue;}for(let j=obstacles.length-1;j>=0;j--){const o=obstacles[j];if(dist2(p.x,p.y,o.x,o.y)<=(p.rad+o.r)*(p.rad+o.r)){obstacles.splice(j,1);POINTS.total+=2;}}}
+      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.x-=o.speed*dt;if(o.x<-120)obstacles.splice(i,1);}
+      for(let i=bananas.length-1;i>=0;i--){const b=bananas[i];b.x-=b.speed*dt;if(b.x<-120)bananas.splice(i,1);}
+      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];if(dist2(o.x,o.y,player.x,player.y)<=(o.r+player.r)*(o.r+player.r)){playSfx("chocar",0.7);panelMsg.textContent=CRASH_MESSAGES[Math.floor(Math.random()*CRASH_MESSAGES.length)];panel.classList.add('show');}}
+      for(let i=bananas.length-1;i>=0;i--){const b=bananas[i];if(dist2(b.x,b.y,player.x,player.y)<=(b.r+player.r)*(b.r+player.r)){bananas.splice(i,1);POINTS.total+=(b.kind==='cuenco'?5:1);playSfx("recolectar",0.8);}}
+      scoreEl.textContent="Puntos: "+POINTS.total;zenFill.style.width=(CHARGE.value/CHARGE.max)*100+"%";zenFill.parentElement.classList.toggle('cooldown',CHARGE.cooldown>0);
+    }
+
+    // ======== DRAW =========
+    function draw() {
+      ctx.clearRect(0,0,WORLD.w,WORLD.h);
+      if(IMG.bg) ctx.drawImage(IMG.bg,0,0,WORLD.w,WORLD.h);
+      for(let pass=0;pass<3;pass++){for(const c of CLOUD.list){if(c.band!==pass)continue;if(c.img)ctx.drawImage(c.img,c.x,c.y,c.w,c.h);}}
+      for(const b of bananas){if(b.kind==='cuenco'&&IMG.cuenco){ctx.drawImage(IMG.cuenco,b.x-b.r,b.y-b.r,b.r*2,b.r*2);}else if(IMG.banana){ctx.drawImage(IMG.banana,b.x-b.r,b.y-b.r,b.r*2,b.r*2);}}
+      for(const o of obstacles){const img=IMG.obstaculos[o.kind]||null;if(img)ctx.drawImage(img,o.x-o.r,o.y-o.r,o.r*2,o.r*2);}
+      for(const p of pulses){ctx.strokeStyle=`rgba(99,102,241,${Math.max(0,p.life/PULSE.life)})`;ctx.lineWidth=6;ctx.beginPath();ctx.arc(p.x,p.y,p.rad,0,Math.PI*2);ctx.stroke();}
+      for(let s of sueloScroll){if(IMG.suelo)ctx.drawImage(IMG.suelo,s.x,WORLD.h-GROUND_H,WORLD.w,GROUND_H);}
+      for(const p of particles){ctx.fillStyle=p.color+Math.max(0,p.life)+")";ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}
+      const pulse=0.6+0.2*Math.sin(performance.now()/300);ctx.fillStyle=`rgba(255,255,255,${0.25*pulse})`;ctx.beginPath();ctx.arc(player.x,player.y,60,0,Math.PI*2);ctx.fill();
+      const erizoImg=(player.state==='inhalando'&&IMG.erizo.inhalando)?IMG.erizo.inhalando:(player.state==='gritando'&&IMG.erizo.gritando)?IMG.erizo.gritando:IMG.erizo.calmado;
+      if(erizoImg){ctx.drawImage(erizoImg,player.x-40,player.y-40,80,80);}
+    }
+
+    // ======== LOOP =========
+    let lastFrame=performance.now();function frame(now){const dt=Math.min(0.033,(now-lastFrame)/1000);lastFrame=now;update(dt);draw();requestAnimationFrame(frame);}
+    loadAll().then(()=>{reset();requestAnimationFrame(frame);});
+  })();
+  </script>
+</body>
+</html>
