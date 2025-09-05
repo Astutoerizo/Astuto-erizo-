@@ -474,12 +474,12 @@ if (player.state === 'mareado') {
   return; // saltamos el resto para no dibujar encima
 }
       const t = performance.now() / 300;
-      let scale = 1;
-      if (player.state === 'calmado') scale = 1 + 0.02 * Math.sin(t);
-      else if (player.state === 'inhalando') scale = 1.3;
-      else if (player.state === 'gritando') scale = 0.9;
+      let erizoScale = 1;
+      if (player.state === 'calmado') erizoScale = 1 + 0.02 * Math.sin(t);
+      else if (player.state === 'inhalando') erizoScale = 1.3;
+      else if (player.state === 'gritando') erizoScale = 0.9;
      if (erizoImg) {
-  const s = 80 * scale; // tamaño destino
+  const s = 80 * erizoScale; // tamaño destino
   ctx.drawImage(erizoImg, player.x - s*0.5, player.y - s*0.5, s, s);
 
   // Patitas/brazos (detalles simples)
