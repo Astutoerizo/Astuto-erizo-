@@ -94,6 +94,7 @@
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.3);
+      playSfx("bowl", 0.9);
     }
 
     function playPlin() {
@@ -107,6 +108,7 @@
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.15);
+      playSfx("plop", 0.7);
     }
 
     function playGong() {
@@ -121,49 +123,52 @@
       osc.start();
       osc.stop(audioCtx.currentTime + 2);
     }
-// ======== MÚSICA DE FONDO =========
+// ======== MÚSICA DE FONDO (archivos) =========
 const MUSIC = {
-  nivel1: "assets/musica_base.mp3",
+  base: "assets/musica_base.mp3",
   boss: "assets/musica_boss.mp3",
-  bonus: "assets/musica_bonus.mp3"
+  bonus: "assets/musica_bonus.mp3",
 };
 
 let musicAudio = null;
+let currentMusic = null;
 
-async function playMusic(trackName, loop = true) {
-  const src = MUSIC[trackName];
+async function playMusic(track, loop = true, volume = 0.5) {
+  const src = MUSIC[track];
   if (!src) return;
 
-  // Paramos la música anterior si suena
-  if (musicAudio) {
+  if (musicAudio) { // parar anterior
     musicAudio.pause();
     musicAudio = null;
   }
+  const audio = new Audio(src);
+  audio.loop = loop;
+  audio.volume = volume;
+  musicAudio = audio;
 
-  // Creamos nuevo <audio>
-  musicAudio = new Audio(src);
-  musicAudio.loop = loop;
-  musicAudio.volume = 0.5; // 🎚️ volumen general (ajustable)
-  
   try {
-    await musicAudio.play();
+    await audio.play(); // puede fallar antes del primer toque (móvil)
+    currentMusic = track;
   } catch (e) {
-    console.log("⚠️ Música bloqueada hasta interacción del usuario:", e);
+    // Se desbloqueará al primer pointerdown
+    currentMusic = null;
+    console.log("Música esperando interacción del usuario…");
   }
 }
-    // ======== SONIDOS FX ABSURDOS =========
+
+// ======== SONIDOS FX (archivos) =========
 const SFX = {
-  platanazo: "assets/sfx_platanazo.mp3",
-  risita: "assets/sfx_risita.mp3",
-  trombonFail: "assets/sfx_trombon.mp3"
+  carga: "assets/sonido_carga_intenso.mp3",
+  bowl:  "assets/sonido_bowl_limpio.mp3",
+  plop:  "assets/sonido_plop.mp3",
 };
 
 function playSfx(name, volume = 1.0) {
   const src = SFX[name];
   if (!src) return;
-  const audio = new Audio(src);
-  audio.volume = volume;
-  audio.play();
+  const a = new Audio(src);
+  a.volume = volume;
+  a.play().catch(()=>{});
 }
     // ======== ASSETS =========
     const ASSETS = {
@@ -222,14 +227,14 @@ function withinCanvas(clientX, clientY){
 
 canvas.addEventListener('pointerdown', async (e) => {
   if (!withinCanvas(e.clientX, e.clientY)) return;
+  if (audioCtx.state === "suspended") await audioCtx.resume(); // desbloquea WebAudio
 
-  // 🔊 Desbloquea audio en móvil (Safari/Chrome)
-  if (audioCtx.state === "suspended") {
-    await audioCtx.resume();
+  // Primera vez que el jugador toca: iniciar música base si no suena
+  if (!musicAudio || currentMusic === null) {
+    playMusic("base");
   }
 
-  isDown = true;
-  e.preventDefault();
+  isDown = true; e.preventDefault();
   hint.style.display = 'none';
 });
 
@@ -354,7 +359,7 @@ window.addEventListener('pointerup', (e) => {
   player.y += Math.sin(performance.now() / 200) * 0.5;
 
   CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
-  if (Math.random() < 0.02) playInhalar();
+ if (Math.random() < 0.02) playSfx("carga", 0.35);
 } else {
   player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
 }
