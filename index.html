@@ -73,6 +73,7 @@
   <div id="countdown" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:9999;">
     <img id="countImg" alt="" style="max-width:240px; width:60%; height:auto; filter: drop-shadow(0 8px 24px rgba(0,0,0,.55));" />
   </div>
+
   <script>
   (() => {
     // ======== CONFIG GENERAL =========
@@ -175,6 +176,7 @@
         "assets/contador_helado.png"
       ],
       contadorGo: "assets/contador_go.png",
+      logo: "assets/logo_videojuego.png"
     };
 
     // ======== CANVAS =========
@@ -197,6 +199,24 @@
     }
     window.addEventListener('resize', fit); fit();
 
+    // ======== IMÁGENES =========
+    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[], contador:[], contadorGo:null, logo:null };
+    function loadImage(src){ return new Promise(res => { if(!src){res(null);return;} const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; }); }
+    async function loadAll() {
+      IMG.bg1 = await loadImage(ASSETS.bg1);
+      IMG.bg2 = await loadImage(ASSETS.bg2);
+      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
+      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
+      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
+      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
+      IMG.banana = await loadImage(ASSETS.banana);
+      IMG.suelo  = await loadImage(ASSETS.suelo);
+      IMG.cuenco = await loadImage(ASSETS.cuenco);
+      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
+      for (let src of ASSETS.contador) IMG.contador.push(await loadImage(src));
+      IMG.contadorGo = await loadImage(ASSETS.contadorGo);
+      IMG.logo = await loadImage(ASSETS.logo);
+    }
     // ======== INPUT =========
     let isDown = false, justReleased = false, wasInhaling = false;
     let inhaleSfxTimer = 0;
@@ -213,6 +233,7 @@
       if (!musicAudio || currentMusic === null) playMusic("base");
       isDown = true; e.preventDefault(); hint.style.display = 'none';
     });
+
     window.addEventListener('pointerup', (e) => {
       if (!isDown) return;
       isDown = false; justReleased = true; e.preventDefault();
@@ -227,25 +248,8 @@
     // ======== UTIL =========
     const rand = (a,b) => a + Math.random()*(b-a);
     const chance = (p) => Math.random() < p;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
-
-    // ======== IMÁGENES =========
-    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[], contador:[], contadorGo:null };
-    function loadImage(src){ return new Promise(res => { if(!src){res(null);return;} const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; }); }
-    async function loadAll() {
-      IMG.bg1 = await loadImage(ASSETS.bg1);
-      IMG.bg2 = await loadImage(ASSETS.bg2);
-      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
-      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
-      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
-      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
-      IMG.banana = await loadImage(ASSETS.banana);
-      IMG.suelo  = await loadImage(ASSETS.suelo);
-      IMG.cuenco = await loadImage(ASSETS.cuenco);
-      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
-      for (let src of ASSETS.contador) IMG.contador.push(await loadImage(src));
-      IMG.contadorGo = await loadImage(ASSETS.contadorGo);
-    }
 
     // ======== NUBES =========
     function initClouds() {
@@ -256,8 +260,10 @@
         CLOUD.list.push({ x: rand(0, WORLD.w), y: rand(50, WORLD.h/2), w: rand(80, 180), h: rand(50, 100), speed: 20 + band*40, band, img });
       }
     }
+
     // ======== ESTADO Y SPAWNER =========
     let dead = false;
+
     function spawnObstacle() {
       const y = rand(240, WORLD.h - 180);
       const r = rand(44, 70);
@@ -310,9 +316,7 @@
       }
     }
 
-    btnRestart.addEventListener('click', () => {
-      reset();
-    });
+    btnRestart.addEventListener('click', reset);
 
     // ======== UPDATE =========
     function update(dt) {
@@ -366,7 +370,7 @@
           inhaleSfxTimer = 0;
         } else {
           inhaleSfxTimer += dt;
-          if (inhaleSfxTimer >= 0.5) {
+          if (inhaleSfxTimer >= INHALE_SFX_INTERVAL) {
             playSfx("inhalar", 0.25);
             inhaleSfxTimer = 0;
           }
@@ -388,17 +392,19 @@
         justReleased = false;
         if (CHARGE.cooldown <= 0) {
           if (CHARGE.value >= CHARGE.over) {
+            // Grito demasiado cargado → pequeño castigo (cooldown más largo)
             CHARGE.cooldown = 0.7;
             CHARGE.value = 0;
             player.state = 'gritando';
           } else {
+            // Pulso circular
             const t = CHARGE.value / CHARGE.max;
             const rad = PULSE.base + t * (PULSE.max - PULSE.base);
             pulses.push({ x: player.x + 40, y: player.y, rad, life: PULSE.life });
             CHARGE.cooldown = CHARGE.cooldownBase;
             CHARGE.value = 0;
             player.state = 'gritando';
-            // Sfx
+            // Sfx mezcla: oscilador corto + wav
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = "square";
@@ -515,7 +521,7 @@
       zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
       zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
 
-      // Desbloqueos
+      // Desbloqueos persistentes
       if (!unlocked.boss && POINTS.total >= 50) {
         unlocked.boss = true;
         localStorage.setItem("unlockedBoss", "true");
@@ -655,10 +661,11 @@
         ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
       }
     }
-
-    // ======== LOOP PRINCIPAL =========
+```0
+// ======== LOOP PRINCIPAL =========
     let lastFrame = performance.now();
     let started = false;
+
     function frame(now) {
       const dt = Math.min(0.033, (now - lastFrame) / 1000);
       lastFrame = now;
@@ -666,6 +673,7 @@
       draw();
       requestAnimationFrame(frame);
     }
+
     function start(){
       if (started) return;
       started = true;
@@ -749,11 +757,6 @@
   })();
   </script>
 
-  <!-- ======== OVERLAY COUNTDOWN ========= -->
-  <div id="countdown" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:9999; backdrop-filter: blur(2px);">
-    <img id="countImg" alt="" style="max-width:240px; width:60%; height:auto; filter: drop-shadow(0 8px 24px rgba(0,0,0,.55)); image-rendering: crisp-edges;" />
-  </div>
-
   <!-- ======== PANEL DE MENÚ INICIAL ========= -->
   <div class="panel show" id="menuPanel">
     <div class="card">
@@ -770,6 +773,5 @@
       </p>
     </div>
   </div>
-
 </body>
 </html>
