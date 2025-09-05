@@ -66,6 +66,11 @@
   </div>
 
   <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div>
+  <div id="countdown" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:9999;">
+  <img id="countImg" alt="" style="max-width:240px; width:60%; height:auto; filter: drop-shadow(0 8px 24px rgba(0,0,0,.55));" />
+</div>
+#countdown { backdrop-filter: blur(2px); }
+#countdown img { image-rendering: crisp-edges; }
 
   <script>
   (() => {
@@ -185,6 +190,19 @@
         "assets/nubes/nube3.png",
         "assets/nubes/nube4.png"
       ]
+      contador: [
+  "assets/contador_arbol.png",
+  "assets/contador_calcetin.png",
+  "assets/contador_leche.png",
+  "assets/contador_cuenco.png",
+  "assets/contador_antena.png",
+  "assets/contador_seta.png",
+  "assets/contador_coche.png",
+  "assets/contador_lapiz.png",
+  "assets/contador_paraguas.png",
+  "assets/contador_helado.png"
+],
+contadorGo: "assets/contador_go.png",
     };
 
     // ======== CANVAS =========
@@ -255,7 +273,8 @@
     function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
     // ======== IMÁGENES =========
-    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[] };
+    const IMG = { bg1:null, bg2:null, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[], contador: [],
+contadorGo: null, };
     function loadImage(src){
       return new Promise(res => {
         if(!src){ res(null); return; }
@@ -276,6 +295,12 @@
       IMG.suelo  = await loadImage(ASSETS.suelo);
       IMG.cuenco = await loadImage(ASSETS.cuenco);
       for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
+      // Contador absurdo
+IMG.contador = [];
+for (const src of ASSETS.contador) {
+  IMG.contador.push(await loadImage(src));
+}
+IMG.contadorGo = await loadImage(ASSETS.contadorGo);
     }
 
     // ======== NUBES =========
@@ -745,6 +770,48 @@ loadAll().then(() => {
     const btnBoss   = document.getElementById("btnBoss");
     const btnBonus  = document.getElementById("btnBonus");
     const menuPanel = document.getElementById("menuPanel");
+    function countdown(onDone){
+  const overlay = document.getElementById('countdown');
+  const imgEl = document.getElementById('countImg');
+
+  // Pool de imágenes (todas menos el "GO")
+  const pool = IMG.contador.filter(Boolean);
+  // Elegimos 3 distintas (si hay menos de 3, repetirá alguna sin romperse)
+  const picks = [];
+  const used = new Set();
+  for (let i = 0; i < 3; i++) {
+    if (!pool.length) break;
+    let idx;
+    let tries = 0;
+    do {
+      idx = Math.floor(Math.random() * pool.length);
+      tries++;
+    } while (used.has(idx) && tries < 20);
+    used.add(idx);
+    picks.push(pool[idx]);
+  }
+
+  overlay.style.display = 'flex';
+  let step = 0;
+
+  function showNext(){
+    if (step < picks.length) {
+      const im = picks[step];
+      imgEl.src = im?.src || ASSETS.contador[step] || "";
+      step++;
+      setTimeout(showNext, 800); // tiempo entre imágenes (ajusta si quieres)
+    } else {
+      // Mostrar SIEMPRE el "GO" como cuarto paso
+      if (IMG.contadorGo) imgEl.src = IMG.contadorGo.src; else imgEl.src = ASSETS.contadorGo;
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        if (typeof onDone === 'function') onDone();
+      }, 700); // duración del "GO"
+    }
+  }
+
+  showNext();
+}
 
     if (btnNormal) btnNormal.addEventListener("click", () => {
       currentMode = "normal";
@@ -765,7 +832,37 @@ loadAll().then(() => {
       if (menuPanel) menuPanel.classList.remove("show");
       reset();
     });
+// Listeners de selección de modo
+const btnNormal = document.getElementById("btnNormal");
+const btnBoss   = document.getElementById("btnBoss");
+const btnBonus  = document.getElementById("btnBonus");
+const menuPanel = document.getElementById("menuPanel");
 
+// Evita doble arranque si el usuario pulsa varias veces
+let modeChosen = false;
+
+function startAfterMenu(mode){
+  if (modeChosen) return;
+  modeChosen = true;
+  currentMode = mode;
+  if (menuPanel) menuPanel.classList.remove("show");
+  // Cuenta atrás absurda → luego arranca el loop
+  countdown(() => { start(); });
+}
+
+if (btnNormal) btnNormal.addEventListener("click", () => {
+  startAfterMenu("normal");
+});
+
+if (btnBoss) btnBoss.addEventListener("click", () => {
+  if (!unlocked.boss) return;
+  startAfterMenu("boss");
+});
+
+if (btnBonus) btnBonus.addEventListener("click", () => {
+  if (!unlocked.bonus) return;
+  startAfterMenu("bonus");
+});
   })();
   </script>
 
