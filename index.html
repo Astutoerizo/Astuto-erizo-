@@ -23,10 +23,14 @@
       background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9;
     }
     .panel {
-      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .2s ease;
-    }
-    .panel.show { opacity:1; pointer-events:auto; }
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.45); transition:opacity .2s ease;
+}
+.panel.show {
+  display:flex;
+  opacity:1;
+  pointer-events:auto;
+}
     .card {
       background:#1e1e24; border:1px solid #333; border-radius:16px; padding:20px; width:min(92vw, 420px); text-align:center;
       box-shadow: 0 10px 30px rgba(0,0,0,.35);
@@ -722,8 +726,11 @@
       requestAnimationFrame(frame);
     }
 
-    loadAll().then(start);
-    setTimeout(start, 2500);
+   // Cargar imágenes, pero NO arrancar aún
+loadAll().then(() => {
+  updateMenuButtons();
+  // mostramos el menú, pero sin start();
+});
 
     // ======== MENÚ & DESBLOQUEOS =========
     function updateMenuButtons() {
