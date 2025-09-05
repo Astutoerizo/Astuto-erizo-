@@ -151,6 +151,20 @@ async function playMusic(trackName, loop = true) {
     console.log("⚠️ Música bloqueada hasta interacción del usuario:", e);
   }
 }
+    // ======== SONIDOS FX ABSURDOS =========
+const SFX = {
+  platanazo: "assets/sfx_platanazo.mp3",
+  risita: "assets/sfx_risita.mp3",
+  trombonFail: "assets/sfx_trombon.mp3"
+};
+
+function playSfx(name, volume = 1.0) {
+  const src = SFX[name];
+  if (!src) return;
+  const audio = new Audio(src);
+  audio.volume = volume;
+  audio.play();
+}
     // ======== ASSETS =========
     const ASSETS = {
       bg1: "assets/fondo_calc.png",
