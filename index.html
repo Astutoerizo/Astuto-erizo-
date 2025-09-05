@@ -72,6 +72,17 @@
     const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
     const PULSE  = { base:120, max:380, life:0.25 };
     const POINTS = { total:0 };
+    const CRASH_MESSAGES = [
+  "El erizo se quedó sin aire… como tus plantas en agosto.",
+  "Has gritado al vacío. El vacío gritó de vuelta.",
+  "Chocaste contra la iluminación… pero era un helado.",
+  "Tu zen se fue por el paraguas roto.",
+  "El universo respondió con un plátano invisible.",
+  "Erizo y obstáculo se fundieron en un abrazo incómodo.",
+  "La serenidad se tropezó contigo.",
+  "Has visto la luz... y duele",
+  "Un pato de goma presenció tu derrota."
+];
 
     // ======== DESBLOQUEOS =========
     let unlocked = {
@@ -390,10 +401,6 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
   const boost = (player.vy > 0 ? 1.5 : 1.0);
   player.vy += PHYSICS.inhaleForce * boost * dt;
 
-  // Hinchado + pequeña ondulación
-  player.y += Math.sin(performance.now() / 200) * 0.5;
-
-  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
 
   // Sonido de inhalar rítmico (al empezar y cada 0.5s)
   if (!wasInhaling) {
@@ -405,7 +412,7 @@ const INHALE_SFX_INTERVAL = 0.5; // segundos
     playSfx("inhalar", 0.25);
     inhaleSfxTimer = 0;
   }
-} else {
+
   player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
 
   // Si soltó → resetear timer
@@ -536,9 +543,7 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
         if (dist2(o.x,o.y,player.x,player.y) <= (o.r+player.r)*(o.r+player.r)) {
           playSfx("chocar", 0.7);
           dead = true;
-          panelMsg.textContent = (Math.random() < .5)
-            ? "El erizo se quedó sin aire… como tus plantas en agosto."
-            : "Has gritado al vacío. El vacío gritó de vuelta.";
+          panelMsg.textContent = CRASH_MESSAGES[Math.floor(Math.random() * CRASH_MESSAGES.length)];
           panel.classList.add('show');
         }
       }
@@ -752,6 +757,7 @@ wasInhaling = isDown && CHARGE.cooldown <= 0;
   <!-- ======== PANEL DE MENÚ INICIAL ========= -->
   <div class="panel show" id="menuPanel">
     <div class="card">
+      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width: 220px; margin-bottom: 12px;">
       <h2>Astuto Erizo</h2>
       <p>Elige tu camino zen:</p>
       <div style="display:flex; flex-direction:column; gap:8px;">
