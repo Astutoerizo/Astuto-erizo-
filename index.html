@@ -155,7 +155,7 @@
     const panelMsg = document.getElementById('panelMsg');
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
-    const PHYSICS = { gravity: 600, inhaleForce: -650, maxVy: 500 };
+    const PHYSICS = { gravity: 600, inhaleForce: -900, maxVy: 500 };
     const GROUND_H = 180;
 
     let scale = 1, offsetX = 0, offsetY = 0;
@@ -290,15 +290,19 @@
       }
       // Input + física
       if (isDown && CHARGE.cooldown <= 0) {
-        player.state = 'inhalando';
-        player.vy += PHYSICS.inhaleForce * dt;
-        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); // 🔥 suma carga
-        if (Math.random() < 0.02) playInhalar();
-         player.vy *= 0.95; // amortigua la caída
-  player.y += Math.sin(performance.now() / 200) * 0.6; // pequeño balanceo
-      } else {
-        player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
-      }
+  player.state = 'inhalando';
+
+  // Fuerza hacia arriba (sube mientras está inhalando)
+  player.vy += PHYSICS.inhaleForce * dt;
+
+  // Hinchado + pequeña ondulación
+  player.y += Math.sin(performance.now() / 200) * 0.5;
+
+  CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+  if (Math.random() < 0.02) playInhalar();
+} else {
+  player.state = (player.state === 'gritando') ? 'gritando' : 'calmado';
+}
       player.vy += PHYSICS.gravity * dt;
       if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
       player.y += player.vy * dt;
@@ -319,6 +323,11 @@
           }
         }
       }
+      // Si toca el suelo con demasiada velocidad → mareo
+if (player.y >= sueloTop && Math.abs(player.vy) > 400) {
+  player.state = 'mareado';
+  player.mareo = 0;
+}
       // Acumular mareo al gritar
 if (player.state === 'gritando') {
   player.mareo += dt;
