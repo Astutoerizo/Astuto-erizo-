@@ -52,6 +52,17 @@
       font-weight: 900; letter-spacing: -0.03em;
       color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6);
     }
+    #countdown img {
+  max-width: 60%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  animation: zoomIn 0.6s ease;
+}
+@keyframes zoomIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
   </style>
 </head>
 <body>
@@ -313,15 +324,15 @@
   ];
   const COUNTDOWN_GO = "assets/contador_go.png";
 
+   const COUNT_SFX = "assets/gong.mp3"; // cambia aquí por campanilla/pop/etc si prefieres
+
   function showCountdown(onDone) {
-    // elegimos 3 distintas al azar
     let pool = [...COUNTDOWN_IMAGES];
     let seq = [];
     for (let i = 0; i < 3; i++) {
       const idx = Math.floor(Math.random() * pool.length);
       seq.push(pool.splice(idx, 1)[0]);
     }
-    // añadimos el GO fijo
     seq.push(COUNTDOWN_GO);
 
     let i = 0;
@@ -329,9 +340,14 @@
 
     function showNext() {
       if (i < seq.length) {
-        countNum.innerHTML = `<img src="${seq[i]}" alt="count" style="max-width:50%;height:auto;">`;
+        countNum.innerHTML = `<img src="${seq[i]}" alt="count">`;
+        if (COUNT_SFX) { // reproducir efecto de sonido
+          const a = new Audio(COUNT_SFX);
+          a.volume = 0.7;
+          a.play().catch(()=>{});
+        }
         i++;
-        setTimeout(showNext, 700);
+        setTimeout(showNext, 1000); // más tiempo para ver la animación
       } else {
         countdownEl.classList.remove('show');
         if (typeof onDone === 'function') onDone();
@@ -339,7 +355,6 @@
     }
     showNext();
   }
-
   let started = false;
   function startGame() {
     if (started) return;
