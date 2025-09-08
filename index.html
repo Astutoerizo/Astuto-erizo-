@@ -8,6 +8,8 @@
     html, body { margin:0; height:100%; background:#0e0e10; color:#fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
     canvas { background:#1b1b1f; touch-action:none; }
+
+    /* HUD */
     .hud {
       position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
       width: min(92vw, 540px); pointer-events:none;
@@ -18,10 +20,14 @@
     .fill { height:100%; width:0%; background:#86efac; transition: width .08s linear; }
     .cooldown { opacity:.45; }
     .score { min-width:120px; text-align:right; }
+
+    /* Toast */
     .toast {
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
       background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9;
     }
+
+    /* Panels */
     .panel {
       position:fixed; inset:0; display:none; align-items:center; justify-content:center;
       background:rgba(0,0,0,.45); transition:opacity .2s ease;
@@ -39,7 +45,8 @@
       display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d;
       font-weight:700; cursor:pointer; user-select:none;
     }
-    /* Overlay de cuenta atrás simple */
+
+    /* Countdown */
     #countdown {
       position: fixed; inset: 0;
       display: none; align-items: center; justify-content: center;
@@ -63,15 +70,44 @@
       from { transform: scale(0.5); opacity: 0; }
       to   { transform: scale(1);   opacity: 1; }
     }
+
     /* Loader */
     #loader {
-      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-      background:#0e0e10; color:#fff; font-size:18px; z-index:2000;
+      position: fixed;
+      inset: 0;
+      background: #0e0e10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      color: #fff;
+      font-family: system-ui, sans-serif;
     }
-    .loader-content { text-align:center; }
+    #loader img {
+      max-width: 220px;
+      animation: balanceo 2s ease-in-out infinite;
+      transform-origin: top center;
+    }
+    #loader p {
+      margin-top: 16px;
+      font-size: 18px;
+      opacity: 0.8;
+    }
+    @keyframes balanceo {
+      0%   { transform: rotate(3deg); }
+      50%  { transform: rotate(-3deg); }
+      100% { transform: rotate(3deg); }
+    }
   </style>
 </head>
 <body>
+  <!-- Loader -->
+  <div id="loader">
+    <img src="assets/loader.png" alt="Astuto Erizo Loader">
+    <p>Cargando la serenidad...</p>
+  </div>
+
   <div id="wrap">
     <canvas id="game" width="540" height="960"></canvas>
   </div>
@@ -79,14 +115,6 @@
   <div class="hud">
     <div class="bar"><div class="fill" id="zenFill"></div></div>
     <div class="score" id="score">Puntos: 0</div>
-  </div>
-
-  <!-- Loader -->
-  <div id="loader">
-    <div class="loader-content">
-      <img src="assets/erizo_loader.gif" alt="Cargando..." style="max-width:140px; display:block; margin:0 auto 12px;">
-      <div>Cargando...</div>
-    </div>
   </div>
 
   <!-- Panel de game over -->
@@ -104,7 +132,7 @@
   <!-- Panel de inicio -->
   <div class="panel show" id="menuPanel">
     <div class="card">
-      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width: 300px; margin-bottom: 18px; filter: drop-shadow(0 0 12px rgba(255,255,255,0.3));">
+      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width: 300px; margin-bottom: 12px;">
       <h2>Respira y Grita</h2>
       <p>Cuando estés listo, pulsa jugar y respira profundo…</p>
       <div class="btn" id="btnStart">Jugar</div>
@@ -130,7 +158,6 @@
     const POINTS = { total:0 };
     const PHYSICS = { gravity: 600, inhaleForce: -900, maxVy: 500 };
     const GROUND_H = 180;
-    let isGameOver = false;
 
     const CRASH_MESSAGES = [
       "El erizo se quedó sin aire… como tus plantas en agosto.",
@@ -151,6 +178,7 @@
       recolectar: "assets/sonido_recolectar_platano.mp3",
       inhalar: "assets/sonido_inhalar.mp3",
       chocar: "assets/sonido_chocar.mp3",
+      countdown: "assets/gong.mp3"
     };
     function playSfx(name, volume = 1.0) {
       const src = SFX[name]; if (!src) return;
@@ -257,7 +285,6 @@
 
     // ======== RESET =========
     function reset() {
-      isGameOver = false;
       POINTS.total = 0; CHARGE.value = 0; CHARGE.cooldown = 0;
       SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer = 0; SPAWN.diffTimer = 0;
       obstacles.length = 0; bananas.length = 0; pulses.length = 0; particles.length = 0;
@@ -269,8 +296,6 @@
 
     // ======== UPDATE =========
     function update(dt) {
-      if (isGameOver) return;
-
       for (let s of sueloScroll) { s.x -= SPEED.scroll * dt; if (s.x <= -WORLD.w) s.x += WORLD.w * 2; }
       for (const c of CLOUD.list) { c.x -= c.speed * dt; if (c.x + c.w < 0) { c.x = WORLD.w+rand(10,100); c.y = rand(50, WORLD.h/2); } }
       SPAWN.timer += dt; SPAWN.diffTimer += dt;
@@ -287,26 +312,26 @@
         if (player.vy > 220) player.vy *= 0.5;
         const boost = (player.vy>0?1.5:1.0); player.vy += PHYSICS.inhaleForce*boost*dt;
         CHARGE.value=Math.min(CHARGE.max, CHARGE.value+CHARGE.rate*dt);
-        if (!wasInhaling) { playSfx("inhalar",0.2); inhaleSfxTimer=0; }
-        else { inhaleSfxTimer+=dt; if (inhaleSfxTimer>=0.5){ playSfx("inhalar",0.2); inhaleSfxTimer=0; } }
+        if (!wasInhaling) { playSfx("inhalar",0.25); inhaleSfxTimer=0; }
+        else { inhaleSfxTimer+=dt; if (inhaleSfxTimer>=0.5){ playSfx("inhalar",0.25); inhaleSfxTimer=0; } }
       }
       wasInhaling=isDown&&CHARGE.cooldown<=0;
 
       player.vy+=PHYSICS.gravity*dt; if(player.vy>PHYSICS.maxVy) player.vy=PHYSICS.maxVy; player.y+=player.vy*dt;
-      const sueloTop=WORLD.h-GROUND_H-player.r; if(player.y>sueloTop){player.y=sueloTop;player.vy=0;} if(player.y<80){player.y=80;player.vy=0;}
+      const sueloTop=WORLD.h-GROUND_H-player.r;
+      if(player.y>sueloTop){player.y=sueloTop;player.vy=0;}
+      if(player.y<80){player.y=80;player.vy=0;}
       if(justReleased){
         justReleased=false;
         if(CHARGE.cooldown<=0){
-          if(CHARGE.value>=CHARGE.over){CHARGE.cooldown=0.7;CHARGE.value=0;player.state='gritando';}
-          else{
-            const t=CHARGE.value/CHARGE.max;
-            const rad=PULSE.base+t*(PULSE.max-PULSE.base);
+          if(CHARGE.value>=CHARGE.over){
+            CHARGE.cooldown=0.7;CHARGE.value=0;player.state='gritando';
+          } else {
+            const t=CHARGE.value/CHARGE.max;const rad=PULSE.base+t*(PULSE.max-PULSE.base);
             pulses.push({x:player.x+40,y:player.y,rad,life:PULSE.life});
-            CHARGE.cooldown=CHARGE.cooldownBase;CHARGE.value=0;player.state='gritando';
-            playSfx("grito",0.7);
+            CHARGE.cooldown=CHARGE.cooldownBase;CHARGE.value=0;player.state='gritando';playSfx("grito",0.9);
           }
-        }
-        inhaleSfxTimer=0;
+        } inhaleSfxTimer=0;
       }
       if(CHARGE.cooldown>0){CHARGE.cooldown-=dt;if(CHARGE.cooldown<0)CHARGE.cooldown=0;}
       if(!isDown&&CHARGE.cooldown===0&&player.state!=='mareado')player.state='calmado';
@@ -316,8 +341,8 @@
       for(let i=pulses.length-1;i>=0;i--){const p=pulses[i];p.life-=dt;if(p.life<=0){pulses.splice(i,1);continue;}for(let j=obstacles.length-1;j>=0;j--){const o=obstacles[j];if(dist2(p.x,p.y,o.x,o.y)<=(p.rad+o.r)*(p.rad+o.r)){obstacles.splice(j,1);POINTS.total+=2;}}}
       for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.x-=o.speed*dt;if(o.x<-120)obstacles.splice(i,1);}
       for(let i=bananas.length-1;i>=0;i--){const b=bananas[i];b.x-=b.speed*dt;if(b.x<-120)bananas.splice(i,1);}
-      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];if(dist2(o.x,o.y,player.x,player.y)<=(o.r+player.r)*(o.r+player.r)){playSfx("chocar",0.4);panelMsg.textContent=CRASH_MESSAGES[Math.floor(Math.random()*CRASH_MESSAGES.length)];panel.classList.add('show');isGameOver=true;}}
-      for(let i=bananas.length-1;i>=0;i--){const b=bananas[i];if(dist2(b.x,b.y,player.x,player.y)<=(b.r+player.r)*(b.r+player.r)){bananas.splice(i,1);POINTS.total+=(b.kind==='cuenco'?5:1);playSfx("recolectar",0.5);}}
+      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];if(dist2(o.x,o.y,player.x,player.y)<=(o.r+player.r)*(o.r+player.r)){playSfx("chocar",0.5);panelMsg.textContent=CRASH_MESSAGES[Math.floor(Math.random()*CRASH_MESSAGES.length)];panel.classList.add('show');gameOver=true;}}
+      for(let i=bananas.length-1;i>=0;i--){const b=bananas[i];if(dist2(b.x,b.y,player.x,player.y)<=(b.r+player.r)*(b.r+player.r)){bananas.splice(i,1);POINTS.total+=(b.kind==='cuenco'?5:1);playSfx("recolectar",0.6);}}
       scoreEl.textContent="Puntos: "+POINTS.total;zenFill.style.width=(CHARGE.value/CHARGE.max)*100+"%";zenFill.parentElement.classList.toggle('cooldown',CHARGE.cooldown>0);
     }
 
@@ -326,11 +351,6 @@
       ctx.clearRect(0,0,WORLD.w,WORLD.h);
       if(IMG.bg) ctx.drawImage(IMG.bg,0,0,WORLD.w,WORLD.h);
       for(let pass=0;pass<3;pass++){for(const c of CLOUD.list){if(c.band!==pass)continue;if(c.img)ctx.drawImage(c.img,c.x,c.y,c.w,c.h);}}
-      if (isGameOver) {
-        const erizoImg = IMG.erizo.calmado;
-        if(erizoImg){ctx.drawImage(erizoImg,player.x-40,player.y-40,80,80);}
-        return;
-      }
       for(const b of bananas){if(b.kind==='cuenco'&&IMG.cuenco){ctx.drawImage(IMG.cuenco,b.x-b.r,b.y-b.r,b.r*2,b.r*2);}else if(IMG.banana){ctx.drawImage(IMG.banana,b.x-b.r,b.y-b.r,b.r*2,b.r*2);}}
       for(const o of obstacles){const img=IMG.obstaculos[o.kind]||null;if(img)ctx.drawImage(img,o.x-o.r,o.y-o.r,o.r*2,o.r*2);}
       for(const p of pulses){ctx.strokeStyle=`rgba(99,102,241,${Math.max(0,p.life/PULSE.life)})`;ctx.lineWidth=6;ctx.beginPath();ctx.arc(p.x,p.y,p.rad,0,Math.PI*2);ctx.stroke();}
@@ -342,23 +362,31 @@
     }
 
     // ======== LOOP =========
-    let lastFrame=performance.now();function frame(now){const dt=Math.min(0.033,(now-lastFrame)/1000);lastFrame=now;update(dt);draw();requestAnimationFrame(frame);}
+    let lastFrame=performance.now();
+    let gameOver=false;
+    function frame(now){
+      if(gameOver) return; // detener juego tras perder
+      const dt=Math.min(0.033,(now-lastFrame)/1000);
+      lastFrame=now;
+      update(dt); draw();
+      requestAnimationFrame(frame);
+    }
 
     // ======== ARRANQUE =========
     loadAll().then(() => {
-      loader.style.display = "none"; // ocultar loader cuando todo esté cargado
-
+      loader.style.display = "none"; // ocultar loader al cargar
       const menuPanel   = document.getElementById('menuPanel');
       const btnStart    = document.getElementById('btnStart');
       const countdownEl = document.getElementById('countdown');
       const countNum    = document.getElementById('countNum');
 
       const COUNTDOWN_IMAGES = [
-        "assets/contador_arbol.png","assets/contador_calcetin.png","assets/contador_leche.png","assets/contador_cuenco.png",
-        "assets/contador_antena.png","assets/contador_seta.png","assets/contador_coche.png","assets/contador_lapiz.png","assets/contador_paraguas.png","assets/contador_helado.png"
+        "assets/contador_arbol.png","assets/contador_calcetin.png","assets/contador_leche.png",
+        "assets/contador_cuenco.png","assets/contador_antena.png","assets/contador_seta.png",
+        "assets/contador_coche.png","assets/contador_lapiz.png","assets/contador_paraguas.png",
+        "assets/contador_helado.png"
       ];
       const COUNTDOWN_GO = "assets/contador_go.png";
-      const COUNT_SFX = "assets/gong.mp3";
 
       function showCountdown(onDone) {
         let pool = [...COUNTDOWN_IMAGES];
@@ -371,15 +399,10 @@
 
         let i = 0;
         countdownEl.classList.add('show');
-
         function showNext() {
           if (i < seq.length) {
             countNum.innerHTML = `<img src="${seq[i]}" alt="count">`;
-            if (COUNT_SFX) {
-              const a = new Audio(COUNT_SFX);
-              a.volume = 0.7;
-              a.play().catch(()=>{});
-            }
+            playSfx("countdown",0.7);
             i++;
             setTimeout(showNext, 1000);
           } else {
@@ -389,17 +412,22 @@
         }
         showNext();
       }
+
       let started = false;
       function startGame() {
         if (started) return;
         started = true;
         reset();
+        gameOver=false;
         requestAnimationFrame(frame);
       }
+
       if (btnStart) {
         btnStart.addEventListener('click', () => {
           menuPanel.classList.remove('show');
-          showCountdown(() => { startGame(); });
+          showCountdown(() => {
+            startGame();
+          });
         });
       }
     });
