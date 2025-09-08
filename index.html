@@ -59,7 +59,8 @@
     /* Loader */
     #loader {
       position:fixed; inset:0;
-      display:flex; align-items:center; justify-content:center;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
       background:#0e0e10;
       z-index:2000;
     }
@@ -67,15 +68,27 @@
       max-width: 200px;
       animation: float 1.8s ease-in-out infinite;
     }
+    #loader p {
+      margin-top: 12px;
+      font-size: 18px;
+      color: #6ee7b7;
+      font-weight: bold;
+      animation: blink 1.2s infinite;
+    }
     @keyframes float {
       0%,100% { transform: translateY(0); }
       50%     { transform: translateY(-18px); }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
   </style>
 </head>
 <body>
   <div id="loader">
     <img id="loaderImg" src="assets/loader.png" alt="Cargando...">
+    <p>Loading...</p>
   </div>
 
   <div id="wrap">
@@ -141,20 +154,21 @@
       "Has visto la luz... y duele.",
       "Un pato de goma presenció tu derrota."
     ];
-
-    // ======== AUDIO =========
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // ======== AUDIO / SFX =========
     const SFX = {
       grito: "assets/sonido_bowl_limpio.mp3",
       recolectar: "assets/sonido_recolectar_platano.mp3",
       inhalar: "assets/sonido_inhalar.mp3",
       chocar: "assets/sonido_chocar.mp3",
-      woosh: "assets/woosh.mp3"
+      woosh: "assets/woosh.mp3",
+      gong: "assets/gong.mp3"
     };
     function playSfx(name, volume = 1.0) {
-      const src = SFX[name]; if (!src) return;
-      const a = new Audio(src); a.volume = volume;
-      a.play().catch(()=>{});
+      const src = SFX[name];
+      if (!src) return;
+      const a = new Audio(src);
+      a.volume = volume;
+      a.play().catch(()=>{ /* evita errores en autoplay */ });
     }
 
     // ======== ASSETS =========
@@ -166,8 +180,8 @@
       },
       erizo: {
         calmado:   "assets/calmado.png",
-        inhalando:"assets/respirando.png",
-        gritando: "assets/gritando.png"
+        inhalando: "assets/respirando.png",
+        gritando:  "assets/gritando.png"
       },
       obstaculos: [
         "assets/paraguas.png",
@@ -181,43 +195,447 @@
         "assets/nubes/nube2.png",
         "assets/nubes/nube3.png",
         "assets/nubes/nube4.png"
-      ]
+      ],
+      contador: [
+        "assets/contador_arbol.png",
+        "assets/contador_calcetin.png",
+        "assets/contador_leche.png",
+        "assets/contador_cuenco.png",
+        "assets/contador_antena.png",
+        "assets/contador_seta.png",
+        "assets/contador_coche.png",
+        "assets/contador_lapiz.png",
+        "assets/contador_paraguas.png",
+        "assets/contador_helado.png"
+      ],
+      contadorGo: "assets/contador_go.png"
     };
 
-    // ======== CANVAS & DOM =========
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const zenFill = document.getElementById('zenFill');
-    const scoreEl = document.getElementById('score');
-    const panel = document.getElementById('panel');
-    const panelMsg = document.getElementById('panelMsg');
-    const btnRestart = document.getElementById('btnRestart');
-    const hint = document.getElementById('hint');
+    // ======== CANVAS / DOM references (ya definidos arriba) ========
+    // canvas, ctx, zenFill, scoreEl, panel, panelMsg, btnRestart, hint, menuPanel etc.
 
-    // ======== ESTADO DE LOOP =========
-    let lastFrame = performance.now();
-    let loopId = null;
-    let gameOver = false;
+    // ======== UTIL =========
+    const rand = (a,b) => a + Math.random()*(b-a);
+    const chance = (p) => Math.random() < p;
+    function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
 
-    // ======== LOOP =========
-    function frame(now) {
-      const dt = Math.min(0.033, (now - lastFrame) / 1000);
-      lastFrame = now;
+    // ======== IMÁGENES / LOAD =========
+    const IMG = {
+      fondos: { calc:null, desierto:null, helado:null },
+      erizo: {},
+      obstaculos: [],
+      banana: null,
+      suelo: null,
+      cuenco: null,
+      nubes: [],
+      contador: [],
+      contadorGo: null
+    };
 
-      if (!gameOver) {
-        update(dt);
-        draw();
-        loopId = requestAnimationFrame(frame);
-      } else {
-        // En game over, solo se pinta el fondo limpio
-        ctx.clearRect(0, 0, WORLD.w, WORLD.h);
-        if (currentBg) ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
+    function loadImage(src){
+      return new Promise(res => {
+        if (!src) return res(null);
+        const im = new Image();
+        im.onload = ()=> res(im);
+        im.onerror = ()=> {
+          console.warn("No se pudo cargar imagen:", src);
+          res(null);
+        };
+        // evita caché durante desarrollo (opcional)
+        im.src = src + "?v=1";
+      });
+    }
+
+    async function loadAll(){
+      // fondos
+      IMG.fondos.calc = await loadImage(ASSETS.fondos.calc);
+      IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto);
+      IMG.fondos.helado = await loadImage(ASSETS.fondos.helado);
+      currentBg = IMG.fondos.calc;
+
+      // erizo
+      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
+      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
+      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
+
+      // obstaculos
+      for (let s of ASSETS.obstaculos) {
+        IMG.obstaculos.push(await loadImage(s));
+      }
+
+      IMG.banana = await loadImage(ASSETS.banana);
+      IMG.suelo  = await loadImage(ASSETS.suelo);
+      IMG.cuenco = await loadImage(ASSETS.cuenco);
+
+      // nubes
+      for (let s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
+
+      // contador
+      for (let s of ASSETS.contador) IMG.contador.push(await loadImage(s));
+      IMG.contadorGo = await loadImage(ASSETS.contadorGo);
+    }
+
+    // ======== NUBES =========
+    function initClouds() {
+      CLOUD.list = [];
+      for (let i = 0; i < 10; i++) {
+        const band = Math.floor(rand(0,3));
+        const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
+        CLOUD.list.push({
+          x: rand(0, WORLD.w),
+          y: rand(50, WORLD.h/2),
+          w: rand(80, 180),
+          h: rand(50, 100),
+          speed: 20 + band*40,
+          band,
+          img
+        });
       }
     }
 
-    // (el resto de tu código update, draw, reset se mantiene igual, solo eliminé el bloque que dibujaba nubes en gameOver)
+    // ======== ENTIDADES (definidas arriba) =========
+    // player, sueloScroll, obstacles, bananas, pulses, particles already declared in block1
 
-    // ======== RESET / RESTART ========
+    // ======== RESET (primera vez) =========
+    function doReset() {
+      POINTS.total = 0;
+      CHARGE.value = 0;
+      CHARGE.cooldown = 0;
+
+      SPEED.scroll = 280;
+      SPAWN.interval = 1.2;
+      SPAWN.timer = 0;
+      SPAWN.diffTimer = 0;
+
+      obstacles.length = 0;
+      bananas.length = 0;
+      pulses.length = 0;
+      particles.length = 0;
+
+      player.y = WORLD.h - GROUND_H - player.r + 20;
+      player.vy = 0;
+      player.state = 'calmado';
+      player.mareo = 0;
+
+      panel.classList.remove('show');
+      hint.style.display = '';
+      bgStage = 0;
+      currentBg = IMG.fondos.calc;
+      initClouds();
+      gameOver = false;
+    }
+
+    // btnRestart handler already set in block1 to call reset wrapper; we'll ensure wiring later.
+
+    // ======== UPDATE =========
+    function update(dt){
+      // cambio de fondo por puntos (efecto instantáneo; reproducir woosh un poco antes de cambio intenso)
+      if (POINTS.total >= 85 && bgStage < 2) {
+        // reproducir woosh con pequeño delay para que pico de sonido coincida con la imagen
+        setTimeout(()=> playSfx("woosh", 0.8), 120);
+        currentBg = IMG.fondos.helado;
+        bgStage = 2;
+      } else if (POINTS.total >= 50 && bgStage < 1) {
+        setTimeout(()=> playSfx("woosh", 0.7), 120);
+        currentBg = IMG.fondos.desierto;
+        bgStage = 1;
+      }
+
+      // suelo
+      for (let s of sueloScroll) {
+        s.x -= SPEED.scroll * dt;
+        if (s.x <= -WORLD.w) s.x += WORLD.w * 2;
+      }
+
+      // nubes moviéndose solo si no es gameOver
+      for (const c of CLOUD.list) {
+        c.x -= c.speed * dt;
+        if (c.x + c.w < 0) {
+          c.x = WORLD.w + rand(10,100);
+          c.y = rand(50, WORLD.h/2);
+          c.w = rand(80, 180);
+          c.h = rand(50, 100);
+          c.img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
+        }
+      }
+
+      // spawner y dificultad progresiva
+      SPAWN.timer += dt;
+      SPAWN.diffTimer += dt;
+      if (SPAWN.timer >= SPAWN.interval) {
+        SPAWN.timer = 0;
+        spawnObstacle();
+      }
+      if (SPAWN.diffTimer >= 10) {
+        SPAWN.diffTimer = 0;
+        SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max);
+        SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05);
+      }
+
+      // Input + físicas
+      if (isDown && CHARGE.cooldown <= 0) {
+        player.state = 'inhalando';
+
+        if (player.vy > 220) player.vy *= 0.5;
+        const boost = (player.vy > 0 ? 1.5 : 1.0);
+        player.vy += PHYSICS.inhaleForce * boost * dt;
+
+        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+
+        if (!wasInhaling) {
+          playSfx("inhalar", 0.25);
+          inhaleSfxTimer = 0;
+        } else {
+          inhaleSfxTimer += dt;
+          if (inhaleSfxTimer >= 0.5) {
+            playSfx("inhalar", 0.25);
+            inhaleSfxTimer = 0;
+          }
+        }
+      }
+      wasInhaling = isDown && CHARGE.cooldown <= 0;
+
+      // gravedad y movimiento
+      player.vy += PHYSICS.gravity * dt;
+      if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
+      player.y += player.vy * dt;
+
+      const sueloTop = WORLD.h - GROUND_H - player.r;
+      if (player.y > sueloTop) { player.y = sueloTop; player.vy = 0; }
+      if (player.y < 80) { player.y = 80; player.vy = 0; }
+
+      // soltar → pulso / grito
+      if (justReleased) {
+        justReleased = false;
+        if (CHARGE.cooldown <= 0) {
+          if (CHARGE.value >= CHARGE.over) {
+            CHARGE.cooldown = 0.7;
+            CHARGE.value = 0;
+            player.state = 'gritando';
+          } else {
+            const t = CHARGE.value / CHARGE.max;
+            const rad = PULSE.base + t * (PULSE.max - PULSE.base);
+            pulses.push({ x: player.x + 40, y: player.y, rad, life: PULSE.life });
+            CHARGE.cooldown = CHARGE.cooldownBase;
+            CHARGE.value = 0;
+            player.state = 'gritando';
+            // síntesis simple + archivo
+            try {
+              const osc = audioCtx.createOscillator();
+              const gain = audioCtx.createGain();
+              osc.type = "square";
+              osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+              osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+              gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+              osc.connect(gain).connect(audioCtx.destination);
+              osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } catch (e) { /* fallbacks silenciosos */ }
+            playSfx("grito", 0.85);
+          }
+        }
+        inhaleSfxTimer = 0;
+      }
+
+      // mareo por golpe al suelo
+      if (player.y >= sueloTop && Math.abs(player.vy) > 400 && player.state !== 'mareado') {
+        player.state = 'mareado';
+        player.mareo = 0;
+      }
+
+      // mareo acumulado al gritar
+      if (player.state === 'gritando') {
+        player.mareo += dt;
+        if (player.mareo > 3) { player.state = 'mareado'; player.mareo = 0; }
+      } else if (player.mareo > 0) {
+        player.mareo -= dt * 0.5;
+      }
+
+      // cooldown
+      if (CHARGE.cooldown > 0) {
+        CHARGE.cooldown -= dt;
+        if (CHARGE.cooldown < 0) CHARGE.cooldown = 0;
+      }
+
+      if (!isDown && CHARGE.cooldown === 0 && player.state !== 'mareado') {
+        player.state = 'calmado';
+      }
+
+      // partículas zen
+      if (Math.random() < 0.1) {
+        particles.push({
+          x: player.x + rand(-20, 20),
+          y: player.y + rand(-20, 20),
+          vx: rand(-15, 15),
+          vy: rand(-30, -10),
+          life: 1.0,
+          color: `rgba(255, ${200 + Math.floor(55*Math.random())}, 255,`
+        });
+      }
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt * 0.5;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // pulses dañan obstáculos
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        p.life -= dt;
+        if (p.life <= 0) { pulses.splice(i, 1); continue; }
+        for (let j = obstacles.length - 1; j >= 0; j--) {
+          const o = obstacles[j];
+          if (dist2(p.x, p.y, o.x, o.y) <= (p.rad + o.r) * (p.rad + o.r)) {
+            obstacles.splice(j, 1);
+            POINTS.total += 2;
+          }
+        }
+      }
+
+      // movimiento y limpieza entidades
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.x -= o.speed * dt;
+        if (o.x < -120) obstacles.splice(i, 1);
+      }
+      for (let i = bananas.length - 1; i >= 0; i--) {
+        const b = bananas[i];
+        b.x -= b.speed * dt;
+        if (b.x < -120) bananas.splice(i, 1);
+      }
+
+      // colisiones (obstáculo)
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        if (dist2(o.x, o.y, player.x, player.y) <= (o.r + player.r) * (o.r + player.r)) {
+          // llegada a game over
+          playSfx("chocar", 0.45);
+          panelMsg.textContent = CRASH_MESSAGES[Math.floor(Math.random() * CRASH_MESSAGES.length)];
+          panel.classList.add('show');
+
+          // detén el loop, marca gameOver
+          gameOver = true;
+          if (loopId) cancelAnimationFrame(loopId);
+          // Al entrar en gameOver guardamos una copia de currentBg y dejamos nubes sin moverse:
+          // (el loop dibujará solo currentBg cuando gameOver===true)
+          return; // salimos del update para evitar seguir procesando
+        }
+      }
+
+      // colisiones (bananas)
+      for (let i = bananas.length - 1; i >= 0; i--) {
+        const b = bananas[i];
+        if (dist2(b.x, b.y, player.x, player.y) <= (b.r + player.r) * (b.r + player.r)) {
+          bananas.splice(i, 1);
+          if (b.kind === 'cuenco') { POINTS.total += 5; playSfx("recolectar", 0.9); }
+          else { POINTS.total += 1; playSfx("recolectar", 0.75); }
+        }
+      }
+
+      // HUD
+      scoreEl.textContent = "Puntos: " + POINTS.total;
+      zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
+      zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
+
+      // desbloqueos: (si quieres alertas, las puedes mantener o quitar)
+      if (POINTS.total >= 50 && bgStage < 1) {
+        // handled arriba (update cambia bgStage)
+      }
+    }
+
+    // ======== SPAWNER helper =========
+    function spawnObstacle() {
+      const y = rand(240, WORLD.h - 180);
+      const r = rand(44, 70);
+      const speed = Math.min(SPEED.scroll + rand(0,60), SPEED.max);
+      obstacles.push({ x: WORLD.w + 60, y, r, speed, kind: Math.floor(rand(0, IMG.obstaculos.length)) });
+
+      if (chance(0.30)) {
+        bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 44, speed: speed + 40, kind: 'banana' });
+      }
+      if (chance(0.10)) {
+        bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h-200), r: 44, speed: speed + 20, kind: 'cuenco' });
+      }
+    }
+
+    // ======== DRAW =========
+    function draw() {
+      ctx.clearRect(0,0,WORLD.w,WORLD.h);
+
+      // Fondo (si estamos en gameOver dibujamos SOLO el fondo)
+      if (currentBg) ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
+      else { ctx.fillStyle = '#1b1b1f'; ctx.fillRect(0,0,WORLD.w,WORLD.h); }
+
+      // Si estamos en gameOver, no dibujamos entidades en movimiento (ni partículas), solo fondo
+      if (gameOver) {
+        // opcional: una pequeña overlay tenue detrás del panel, ya tenemos panel visible
+        return;
+      }
+
+      // Nubes por capas
+      for (let pass = 0; pass < 3; pass++) {
+        for (const c of CLOUD.list) {
+          if (c.band !== pass) continue;
+          if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
+          else {
+            ctx.fillStyle = 'rgba(255,255,255,.85)';
+            ctx.beginPath();
+            ctx.ellipse(c.x + c.w/2, c.y + c.h/2, c.w/2, c.h/3, 0, 0, Math.PI*2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Coleccionables
+      for (const b of bananas) {
+        if (b.kind === 'cuenco' && IMG.cuenco) {
+          ctx.drawImage(IMG.cuenco, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
+        } else if (IMG.banana) {
+          ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
+        } else {
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+        }
+      }
+
+      // Obstáculos
+      for (const o of obstacles) {
+        const img = IMG.obstaculos[o.kind] || null;
+        if (img) ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
+        else { ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill(); }
+      }
+
+      // Pulsos
+      for (const p of pulses) {
+        const alpha = Math.max(0, p.life / PULSE.life);
+        ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
+        ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2); ctx.stroke();
+      }
+
+      // Suelo
+      for (let s of sueloScroll) {
+        if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
+        else { ctx.fillStyle = '#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); }
+      }
+
+      // Partículas
+      for (const p of particles) {
+        const alpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color + alpha + ")";
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+      }
+
+      // Aura zen
+      const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300);
+      ctx.fillStyle = `rgba(255,255,255,${0.25 * pulse})`;
+      ctx.beginPath(); ctx.arc(player.x, player.y, 60, 0, Math.PI*2); ctx.fill();
+
+      // Sprite erizo
+     
+// ======== RESET / RESTART ========
     function reset() {
       POINTS.total = 0; CHARGE.value = 0; CHARGE.cooldown = 0;
       SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer = 0; SPAWN.diffTimer = 0;
@@ -239,38 +657,59 @@
     // ======== GAME OVER en update =========
     // Dentro de update ya está la colisión → allí basta con: 
     // gameOver = true; cancelAnimationFrame(loopId);
-
-    // ======== ARRANQUE =========
+        // ======== ARRANQUE =========
     loadAll().then(() => {
       const loader = document.getElementById('loader');
       const loaderImg = document.getElementById('loaderImg');
-      const loaderImgs = ["assets/loader.png","assets/loader1.png","assets/loader2.png","assets/loader3.png"];
+      const loaderImgs = [
+        "assets/loader.png",
+        "assets/loader1.png",
+        "assets/loader2.png",
+        "assets/loader3.png"
+      ];
       loaderImg.src = loaderImgs[Math.floor(Math.random()*loaderImgs.length)];
       setTimeout(()=>{loader.style.display="none";},1800);
 
-      const menuPanel = document.getElementById('menuPanel');
-      const btnStart  = document.getElementById('btnStart');
+      const menuPanel   = document.getElementById('menuPanel');
+      const btnStart    = document.getElementById('btnStart');
       const countdownEl = document.getElementById('countdown');
-      const countNum = document.getElementById('countNum');
+      const countNum    = document.getElementById('countNum');
 
       const COUNTDOWN_IMAGES = [
-        "assets/contador_arbol.png","assets/contador_calcetin.png","assets/contador_leche.png",
-        "assets/contador_cuenco.png","assets/contador_antena.png","assets/contador_seta.png",
-        "assets/contador_coche.png","assets/contador_lapiz.png","assets/contador_paraguas.png","assets/contador_helado.png"
+        "assets/contador_arbol.png",
+        "assets/contador_calcetin.png",
+        "assets/contador_leche.png",
+        "assets/contador_cuenco.png",
+        "assets/contador_antena.png",
+        "assets/contador_seta.png",
+        "assets/contador_coche.png",
+        "assets/contador_lapiz.png",
+        "assets/contador_paraguas.png",
+        "assets/contador_helado.png"
       ];
       const COUNTDOWN_GO = "assets/contador_go.png";
       const COUNT_SFX = "assets/gong.mp3";
 
       function showCountdown(onDone) {
-        let pool=[...COUNTDOWN_IMAGES];let seq=[];
-        for(let i=0;i<3;i++){const idx=Math.floor(Math.random()*pool.length);seq.push(pool.splice(idx,1)[0]);}
+        let pool=[...COUNTDOWN_IMAGES];
+        let seq=[];
+        for(let i=0;i<3;i++){
+          const idx=Math.floor(Math.random()*pool.length);
+          seq.push(pool.splice(idx,1)[0]);
+        }
         seq.push(COUNTDOWN_GO);
-        let i=0;countdownEl.classList.add('show');
+        let i=0;
+        countdownEl.classList.add('show');
         function showNext(){
           if(i<seq.length){
             countNum.innerHTML=`<img src="${seq[i]}" alt="count">`;
-            if(COUNT_SFX){const a=new Audio(COUNT_SFX);a.volume=0.7;a.play().catch(()=>{});}
-            i++;setTimeout(showNext,1000);
+            if(COUNT_SFX){
+              const a=new Audio(COUNT_SFX);
+              a.volume=0.7;
+              a.play().catch(()=>{});
+            }
+            i++;
+            setTimeout(showNext,1000);
           }else{
             countdownEl.classList.remove('show');
             if(typeof onDone==="function") onDone();
@@ -288,7 +727,10 @@
       }
 
       if(btnStart){
-        btnStart.addEventListener('click',()=>{ menuPanel.classList.remove('show'); showCountdown(()=>{startGame();}); });
+        btnStart.addEventListener('click',()=>{
+          menuPanel.classList.remove('show');
+          showCountdown(()=>{ startGame(); });
+        });
       }
     });
   })();
