@@ -39,6 +39,19 @@
       display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d;
       font-weight:700; cursor:pointer; user-select:none;
     }
+    /* Overlay de cuenta atrás simple */
+    #countdown {
+      position: fixed; inset: 0;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.45); backdrop-filter: blur(2px);
+      z-index: 999;
+    }
+    #countdown.show { display: flex; }
+    #countdown #countNum {
+      font-size: clamp(64px, 20vw, 220px);
+      font-weight: 900; letter-spacing: -0.03em;
+      color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6);
+    }
   </style>
 </head>
 <body>
@@ -51,6 +64,7 @@
     <div class="score" id="score">Puntos: 0</div>
   </div>
 
+  <!-- Panel de game over -->
   <div class="panel" id="panel">
     <div class="card">
       <h2>Astuto Erizo</h2>
@@ -61,6 +75,24 @@
   </div>
 
   <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div>
+
+  <!-- Panel de inicio -->
+  <div class="panel show" id="menuPanel">
+    <div class="card">
+      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width: 220px; margin-bottom: 12px;">
+      <h2>Respira y Grita</h2>
+      <p>Cuando estés listo, pulsa jugar y respira profundo…</p>
+      <div class="btn" id="btnStart">Jugar</div>
+      <p style="opacity:.7; font-size:12px; margin-top:10px;">
+        Mantén pulsado para inhalar · Suelta para gritar
+      </p>
+    </div>
+  </div>
+
+  <!-- Cuenta atrás simple -->
+  <div id="countdown">
+    <div id="countNum">3</div>
+  </div>
 
   <script>
   (() => {
@@ -257,7 +289,49 @@
 
     // ======== LOOP =========
     let lastFrame=performance.now();function frame(now){const dt=Math.min(0.033,(now-lastFrame)/1000);lastFrame=now;update(dt);draw();requestAnimationFrame(frame);}
-    loadAll().then(()=>{reset();requestAnimationFrame(frame);});
+
+    // ======== ARRANQUE =========
+    loadAll().then(() => {
+      // elementos del menú y countdown
+      const menuPanel   = document.getElementById('menuPanel');
+      const btnStart    = document.getElementById('btnStart');
+      const countdownEl = document.getElementById('countdown');
+      const countNum    = document.getElementById('countNum');
+
+      function showCountdown(onDone) {
+        const seq = ["3", "2", "1", "¡YA!"];
+        let i = 0;
+        countdownEl.classList.add('show');
+        countNum.textContent = seq[i++];
+        const tick = () => {
+          if (i < seq.length) {
+            countNum.textContent = seq[i++];
+            setTimeout(tick, 700);
+          } else {
+            countdownEl.classList.remove('show');
+            if (typeof onDone === 'function') onDone();
+          }
+        };
+        setTimeout(tick, 700);
+      }
+
+      let started = false;
+      function startGame() {
+        if (started) return;
+        started = true;
+        reset();
+        requestAnimationFrame(frame);
+      }
+
+      if (btnStart) {
+        btnStart.addEventListener('click', () => {
+          menuPanel.classList.remove('show');
+          showCountdown(() => {
+            startGame();
+          });
+        });
+      }
+    });
   })();
   </script>
 </body>
