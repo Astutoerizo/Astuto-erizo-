@@ -357,14 +357,57 @@
     }
 
     // ======== LOOP =========
-    let lastFrame=performance.now();
-    let loopId=null;
-    function frame(now){
-      const dt=Math.min(0.033,(now-lastFrame)/1000);
-      lastFrame=now;
-      update(dt);draw();
-      loopId=requestAnimationFrame(frame);
+let lastFrame = performance.now();
+let loopId = null;
+let gameOver = false;
+
+function frame(now) {
+  const dt = Math.min(0.033, (now - lastFrame) / 1000);
+  lastFrame = now;
+
+  if (!gameOver) {
+    update(dt);
+    draw();
+    loopId = requestAnimationFrame(frame);
+  } else {
+    // cuando está en game over, solo dibuja fondo y nubes estáticas
+    ctx.clearRect(0, 0, WORLD.w, WORLD.h);
+    if (currentBg) ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
+    for (let c of CLOUD.list) {
+      if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
     }
+  }
+}
+
+// ======== GAME OVER (colisión) ========
+for (let i = obstacles.length - 1; i >= 0; i--) {
+  const o = obstacles[i];
+  if (dist2(o.x, o.y, player.x, player.y) <= (o.r + player.r) * (o.r + player.r)) {
+    playSfx("chocar", 0.5);
+    panelMsg.textContent = CRASH_MESSAGES[Math.floor(Math.random() * CRASH_MESSAGES.length)];
+    panel.classList.add('show');
+    cancelAnimationFrame(loopId);
+    gameOver = true;
+  }
+}
+
+// ======== RESET / RESTART ========
+function reset() {
+  POINTS.total = 0; CHARGE.value = 0; CHARGE.cooldown = 0;
+  SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer = 0; SPAWN.diffTimer = 0;
+  obstacles.length = 0; bananas.length = 0; pulses.length = 0; particles.length = 0;
+  player.y = WORLD.h - GROUND_H - player.r + 20;
+  player.vy = 0; player.state = 'calmado'; player.mareo = 0;
+  panel.classList.remove('show'); hint.style.display = '';
+  initClouds();
+  gameOver = false;
+}
+
+btnRestart.addEventListener('click', () => {
+  reset();
+  lastFrame = performance.now();
+  requestAnimationFrame(frame);
+});
 
     // ======== ARRANQUE =========
     loadAll().then(() => {
