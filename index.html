@@ -8,6 +8,8 @@
     html, body { margin:0; height:100%; background:#0e0e10; color:#fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
     canvas { background:#1b1b1f; touch-action:none; }
+
+    /* HUD */
     .hud {
       position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
       width: min(92vw, 540px); pointer-events:none;
@@ -22,6 +24,8 @@
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
       background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9;
     }
+
+    /* Paneles */
     .panel {
       position:fixed; inset:0; display:none; align-items:center; justify-content:center;
       background:rgba(0,0,0,.45); transition:opacity .2s ease;
@@ -39,7 +43,26 @@
       display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d;
       font-weight:700; cursor:pointer; user-select:none;
     }
-    /* Overlay de cuenta atrás simple */
+
+    /* Loader */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: #0e0e10;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    #loader.hidden {
+      display: none;
+    }
+
+    /* Cuenta atrás */
     #countdown {
       position: fixed; inset: 0;
       display: none; align-items: center; justify-content: center;
@@ -53,23 +76,30 @@
       color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6);
     }
     #countdown img {
-  max-width: 60%;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-  animation: zoomIn 0.6s ease;
-}
-@keyframes zoomIn {
-  from { transform: scale(0.5); opacity: 0; }
-  to   { transform: scale(1);   opacity: 1; }
-}
+      max-width: 60%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      animation: zoomIn 0.6s ease;
+    }
+    @keyframes zoomIn {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
   </style>
 </head>
 <body>
+  <!-- Loader -->
+  <div id="loader">
+    <div class="loader-content">Cargando...</div>
+  </div>
+
+  <!-- Juego -->
   <div id="wrap">
     <canvas id="game" width="540" height="960"></canvas>
   </div>
 
+  <!-- HUD -->
   <div class="hud">
     <div class="bar"><div class="fill" id="zenFill"></div></div>
     <div class="score" id="score">Puntos: 0</div>
@@ -100,11 +130,12 @@
     </div>
   </div>
 
-  <!-- Cuenta atrás simple -->
+  <!-- Cuenta atrás -->
   <div id="countdown">
     <div id="countNum"></div>
   </div>
 
+  <!-- SCRIPT DEL JUEGO -->
   <script>
   (() => {
     // ======== CONFIG GENERAL =========
@@ -175,6 +206,7 @@
     const panelMsg = document.getElementById('panelMsg');
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
+    const loader = document.getElementById('loader');
 
     let scale = 1, offsetX = 0, offsetY = 0;
     function fit() {
@@ -255,7 +287,12 @@
       for (let s of sueloScroll) { s.x -= SPEED.scroll * dt; if (s.x <= -WORLD.w) s.x += WORLD.w * 2; }
       for (const c of CLOUD.list) { c.x -= c.speed * dt; if (c.x + c.w < 0) { c.x = WORLD.w+rand(10,100); c.y = rand(50, WORLD.h/2); } }
       SPAWN.timer += dt; SPAWN.diffTimer += dt;
-      if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; obstacles.push({ x: WORLD.w+60, y: rand(240, WORLD.h-180), r: rand(44,70), speed: Math.min(SPEED.scroll+rand(0,60), SPEED.max), kind: Math.floor(rand(0, IMG.obstaculos.length)) }); if (chance(0.3)) bananas.push({ x: WORLD.w+100, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+40, kind:'banana' }); if (chance(0.1)) bananas.push({ x: WORLD.w+150, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+20, kind:'cuenco' }); }
+      if (SPAWN.timer >= SPAWN.interval) {
+        SPAWN.timer = 0;
+        obstacles.push({ x: WORLD.w+60, y: rand(240, WORLD.h-180), r: rand(44,70), speed: Math.min(SPEED.scroll+rand(0,60), SPEED.max), kind: Math.floor(rand(0, IMG.obstaculos.length)) });
+        if (chance(0.3)) bananas.push({ x: WORLD.w+100, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+40, kind:'banana' });
+        if (chance(0.1)) bananas.push({ x: WORLD.w+150, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+20, kind:'cuenco' });
+      }
       if (SPAWN.diffTimer >= 10) { SPAWN.diffTimer = 0; SPEED.scroll = Math.min(SPEED.scroll+SPEED.inc, SPEED.max); SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval-0.05); }
 
       if (isDown && CHARGE.cooldown <= 0) {
@@ -269,7 +306,19 @@
 
       player.vy+=PHYSICS.gravity*dt; if(player.vy>PHYSICS.maxVy) player.vy=PHYSICS.maxVy; player.y+=player.vy*dt;
       const sueloTop=WORLD.h-GROUND_H-player.r; if(player.y>sueloTop){player.y=sueloTop;player.vy=0;} if(player.y<80){player.y=80;player.vy=0;}
-      if(justReleased){justReleased=false;if(CHARGE.cooldown<=0){if(CHARGE.value>=CHARGE.over){CHARGE.cooldown=0.7;CHARGE.value=0;player.state='gritando';}else{const t=CHARGE.value/CHARGE.max;const rad=PULSE.base+t*(PULSE.max-PULSE.base);pulses.push({x:player.x+40,y:player.y,rad,life:PULSE.life});CHARGE.cooldown=CHARGE.cooldownBase;CHARGE.value=0;player.state='gritando';playSfx("grito",0.9);}} inhaleSfxTimer=0;}
+      if(justReleased){
+        justReleased=false;
+        if(CHARGE.cooldown<=0){
+          if(CHARGE.value>=CHARGE.over){
+            CHARGE.cooldown=0.7;CHARGE.value=0;player.state='gritando';
+          }else{
+            const t=CHARGE.value/CHARGE.max;const rad=PULSE.base+t*(PULSE.max-PULSE.base);
+            pulses.push({x:player.x+40,y:player.y,rad,life:PULSE.life});
+            CHARGE.cooldown=CHARGE.cooldownBase;CHARGE.value=0;player.state='gritando';playSfx("grito",0.9);
+          }
+        }
+        inhaleSfxTimer=0;
+      }
       if(CHARGE.cooldown>0){CHARGE.cooldown-=dt;if(CHARGE.cooldown<0)CHARGE.cooldown=0;}
       if(!isDown&&CHARGE.cooldown===0&&player.state!=='mareado')player.state='calmado';
 
@@ -299,79 +348,86 @@
     }
 
     // ======== LOOP =========
-    let lastFrame=performance.now();function frame(now){const dt=Math.min(0.033,(now-lastFrame)/1000);lastFrame=now;update(dt);draw();requestAnimationFrame(frame);}
+    let lastFrame=performance.now();
+    function frame(now){
+      const dt=Math.min(0.033,(now-lastFrame)/1000);
+      lastFrame=now;
+      update(dt);
+      draw();
+      requestAnimationFrame(frame);
+    }
 
     // ======== ARRANQUE =========
-   loadAll().then(() => {
-  // elementos del menú y countdown
-  const menuPanel   = document.getElementById('menuPanel');
-  const btnStart    = document.getElementById('btnStart');
-  const countdownEl = document.getElementById('countdown');
-  const countNum    = document.getElementById('countNum');
+    loadAll().then(() => {
+      loader.classList.add('hidden'); // ocultamos loader cuando todo está cargado
 
-  // lista de imágenes absurdas
-  const COUNTDOWN_IMAGES = [
-    "assets/contador_arbol.png",
-    "assets/contador_calcetin.png",
-    "assets/contador_leche.png",
-    "assets/contador_cuenco.png",
-    "assets/contador_antena.png",
-    "assets/contador_seta.png",
-    "assets/contador_coche.png",
-    "assets/contador_lapiz.png",
-    "assets/contador_paraguas.png",
-    "assets/contador_helado.png"
-  ];
-  const COUNTDOWN_GO = "assets/contador_go.png";
+      const menuPanel   = document.getElementById('menuPanel');
+      const btnStart    = document.getElementById('btnStart');
+      const countdownEl = document.getElementById('countdown');
+      const countNum    = document.getElementById('countNum');
 
-   const COUNT_SFX = "assets/contador.mp3"; // cambia aquí por campanilla/pop/etc si prefieres
+      const COUNTDOWN_IMAGES = [
+        "assets/contador_arbol.png",
+        "assets/contador_calcetin.png",
+        "assets/contador_leche.png",
+        "assets/contador_cuenco.png",
+        "assets/contador_antena.png",
+        "assets/contador_seta.png",
+        "assets/contador_coche.png",
+        "assets/contador_lapiz.png",
+        "assets/contador_paraguas.png",
+        "assets/contador_helado.png"
+      ];
+      const COUNTDOWN_GO = "assets/contador_go.png";
+      const COUNT_SFX = "assets/gong.mp3";
 
-  function showCountdown(onDone) {
-    let pool = [...COUNTDOWN_IMAGES];
-    let seq = [];
-    for (let i = 0; i < 3; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
-      seq.push(pool.splice(idx, 1)[0]);
-    }
-    seq.push(COUNTDOWN_GO);
-
-    let i = 0;
-    countdownEl.classList.add('show');
-
-    function showNext() {
-      if (i < seq.length) {
-        countNum.innerHTML = `<img src="${seq[i]}" alt="count">`;
-        if (COUNT_SFX) { // reproducir efecto de sonido
-          const a = new Audio(COUNT_SFX);
-          a.volume = 0.7;
-          a.play().catch(()=>{});
+      function showCountdown(onDone) {
+        let pool = [...COUNTDOWN_IMAGES];
+        let seq = [];
+        for (let i = 0; i < 3; i++) {
+          const idx = Math.floor(Math.random() * pool.length);
+          seq.push(pool.splice(idx, 1)[0]);
         }
-        i++;
-        setTimeout(showNext, 1000); // más tiempo para ver la animación
-      } else {
-        countdownEl.classList.remove('show');
-        if (typeof onDone === 'function') onDone();
-      }
-    }
-    showNext();
-  }
-  let started = false;
-  function startGame() {
-    if (started) return;
-    started = true;
-    reset();
-    requestAnimationFrame(frame);
-  }
+        seq.push(COUNTDOWN_GO);
 
-  if (btnStart) {
-    btnStart.addEventListener('click', () => {
-      menuPanel.classList.remove('show');
-      showCountdown(() => {
-        startGame();
-      });
+        let i = 0;
+        countdownEl.classList.add('show');
+
+        function showNext() {
+          if (i < seq.length) {
+            countNum.innerHTML = `<img src="${seq[i]}" alt="count">`;
+            if (COUNT_SFX) {
+              const a = new Audio(COUNT_SFX);
+              a.volume = 0.7;
+              a.play().catch(()=>{});
+            }
+            i++;
+            setTimeout(showNext, 1000);
+          } else {
+            countdownEl.classList.remove('show');
+            if (typeof onDone === 'function') onDone();
+          }
+        }
+        showNext();
+      }
+
+      let started = false;
+      function startGame() {
+        if (started) return;
+        started = true;
+        reset();
+        requestAnimationFrame(frame);
+      }
+
+      if (btnStart) {
+        btnStart.addEventListener('click', () => {
+          menuPanel.classList.remove('show');
+          showCountdown(() => {
+            startGame();
+          });
+        });
+      }
     });
-  }
-});
   })();
   </script>
 </body>
