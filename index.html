@@ -91,7 +91,7 @@
 
   <!-- Cuenta atrás simple -->
   <div id="countdown">
-    <div id="countNum">3</div>
+    <div id="countNum"></div>
   </div>
 
   <script>
@@ -291,47 +291,72 @@
     let lastFrame=performance.now();function frame(now){const dt=Math.min(0.033,(now-lastFrame)/1000);lastFrame=now;update(dt);draw();requestAnimationFrame(frame);}
 
     // ======== ARRANQUE =========
-    loadAll().then(() => {
-      // elementos del menú y countdown
-      const menuPanel   = document.getElementById('menuPanel');
-      const btnStart    = document.getElementById('btnStart');
-      const countdownEl = document.getElementById('countdown');
-      const countNum    = document.getElementById('countNum');
+   loadAll().then(() => {
+  // elementos del menú y countdown
+  const menuPanel   = document.getElementById('menuPanel');
+  const btnStart    = document.getElementById('btnStart');
+  const countdownEl = document.getElementById('countdown');
+  const countNum    = document.getElementById('countNum');
 
-      function showCountdown(onDone) {
-        const seq = ["3", "2", "1", "¡YA!"];
-        let i = 0;
-        countdownEl.classList.add('show');
-        countNum.textContent = seq[i++];
-        const tick = () => {
-          if (i < seq.length) {
-            countNum.textContent = seq[i++];
-            setTimeout(tick, 700);
-          } else {
-            countdownEl.classList.remove('show');
-            if (typeof onDone === 'function') onDone();
-          }
-        };
-        setTimeout(tick, 700);
-      }
+  // lista de imágenes absurdas
+  const COUNTDOWN_IMAGES = [
+    "assets/contador_arbol.png",
+    "assets/contador_calcetin.png",
+    "assets/contador_leche.png",
+    "assets/contador_cuenco.png",
+    "assets/contador_antena.png",
+    "assets/contador_seta.png",
+    "assets/contador_coche.png",
+    "assets/contador_lapiz.png",
+    "assets/contador_paraguas.png",
+    "assets/contador_helado.png"
+  ];
+  const COUNTDOWN_GO = "assets/contador_go.png";
 
-      let started = false;
-      function startGame() {
-        if (started) return;
-        started = true;
-        reset();
-        requestAnimationFrame(frame);
-      }
+  function showCountdown(onDone) {
+    // elegimos 3 distintas al azar
+    let pool = [...COUNTDOWN_IMAGES];
+    let seq = [];
+    for (let i = 0; i < 3; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      seq.push(pool.splice(idx, 1)[0]);
+    }
+    // añadimos el GO fijo
+    seq.push(COUNTDOWN_GO);
 
-      if (btnStart) {
-        btnStart.addEventListener('click', () => {
-          menuPanel.classList.remove('show');
-          showCountdown(() => {
-            startGame();
-          });
-        });
+    let i = 0;
+    countdownEl.classList.add('show');
+
+    function showNext() {
+      if (i < seq.length) {
+        countNum.innerHTML = `<img src="${seq[i]}" alt="count" style="max-width:50%;height:auto;">`;
+        i++;
+        setTimeout(showNext, 700);
+      } else {
+        countdownEl.classList.remove('show');
+        if (typeof onDone === 'function') onDone();
       }
+    }
+    showNext();
+  }
+
+  let started = false;
+  function startGame() {
+    if (started) return;
+    started = true;
+    reset();
+    requestAnimationFrame(frame);
+  }
+
+  if (btnStart) {
+    btnStart.addEventListener('click', () => {
+      menuPanel.classList.remove('show');
+      showCountdown(() => {
+        startGame();
+      });
     });
+  }
+});
   })();
   </script>
 </body>
