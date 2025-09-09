@@ -19,18 +19,14 @@
     .cooldown { opacity:.45; }
     .score { min-width:120px; text-align:right; }
     .toast {
-      position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+      position:fixed; bottom:14px; left:50%; transform:translateX(-50%); 
       background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9;
     }
     .panel {
       position:fixed; inset:0; display:none; align-items:center; justify-content:center;
       background:rgba(0,0,0,.45); transition:opacity .2s ease;
     }
-    .panel.show {
-      display:flex;
-      opacity:1;
-      pointer-events:auto;
-    }
+    .panel.show { display:flex; opacity:1; pointer-events:auto; }
     .card {
       background:#1e1e24; border:1px solid #333; border-radius:16px; padding:20px; width:min(92vw, 420px); text-align:center;
       box-shadow: 0 10px 30px rgba(0,0,0,.35);
@@ -86,7 +82,6 @@
   </style>
 </head>
 <body>
-  <!-- Loader -->
   <div id="loader">
     <img id="loaderImg" src="assets/loader.png" alt="Cargando...">
     <p>Loading...</p>
@@ -131,19 +126,16 @@
 
   <script>
   (() => {
-    /* ======== CONFIG GENERAL ========= */
     const WORLD = { w: 540, h: 960 };
     const SPEED = { scroll: 280, inc: 20, max: 520 };
     const SPAWN = { interval: 1.2, min: 0.7, timer: 0, diffTimer: 0 };
     const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
     const PULSE  = { base:120, max:380, life:0.25 };
     const POINTS = { total:0 };
-    const PHYSICS = { gravity: 600, inhaleForce: -900, maxVy: 500 };
+    const PHYSICS = { gravity: 600, inhaleForce: -1100, maxVy: 500 };
     const GROUND_H = 180;
 
-    let bgStage = 0;
-    let currentBg = null;
-
+    let bgStage = 0, currentBg = null;
     const CRASH_MESSAGES = [
       "El erizo se quedó sin aire… como tus plantas en agosto.",
       "Has gritado al vacío. El vacío gritó de vuelta.",
@@ -156,7 +148,6 @@
       "Un pato de goma presenció tu derrota."
     ];
 
-    /* ======== AUDIO ========= */
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const SFX = {
       grito: "assets/sonido_bowl_limpio.mp3",
@@ -172,7 +163,6 @@
       a.play().catch(()=>{});
     }
 
-    /* ======== ASSETS ========= */
     const ASSETS = {
       fondos: {
         calc: "assets/fondo_calc.png",
@@ -184,246 +174,109 @@
         inhalando:"assets/respirando.png",
         gritando: "assets/gritando.png"
       },
-      obstaculos: [
-        "assets/paraguas.png",
-        "assets/helado_meditando.png"
-      ],
+      obstaculos: [ "assets/paraguas.png", "assets/helado_meditando.png" ],
       banana: "assets/platano_puntos.png",
       suelo: "assets/suelo.png",
       cuenco: "assets/cuenco_tibetano.png",
       nubes: [
-        "assets/nubes/nube1.png",
-        "assets/nubes/nube2.png",
-        "assets/nubes/nube3.png",
-        "assets/nubes/nube4.png"
+        "assets/nubes/nube1.png","assets/nubes/nube2.png",
+        "assets/nubes/nube3.png","assets/nubes/nube4.png"
       ],
       contador: [
-        "assets/contador_arbol.png",
-        "assets/contador_calcetin.png",
-        "assets/contador_leche.png",
-        "assets/contador_cuenco.png",
-        "assets/contador_antena.png",
-        "assets/contador_seta.png",
-        "assets/contador_coche.png",
-        "assets/contador_lapiz.png",
-        "assets/contador_paraguas.png",
-        "assets/contador_helado.png"
+        "assets/contador_arbol.png","assets/contador_calcetin.png",
+        "assets/contador_leche.png","assets/contador_cuenco.png",
+        "assets/contador_antena.png","assets/contador_seta.png",
+        "assets/contador_coche.png","assets/contador_lapiz.png",
+        "assets/contador_paraguas.png","assets/contador_helado.png"
       ],
       contadorGo: "assets/contador_go.png"
     };
 
-    /* ======== CANVAS & DOM ========= */
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
     const zenFill = document.getElementById('zenFill');
     const scoreEl = document.getElementById('score');
-    const panel = document.getElementById('panel');
-    const panelMsg = document.getElementById('panelMsg');
+    const panel = document.getElementById('panel'), panelMsg = document.getElementById('panelMsg');
     const btnRestart = document.getElementById('btnRestart');
     const hint = document.getElementById('hint');
 
-    let scale = 1, offsetX = 0, offsetY = 0;
-    function fit() {
-      const vw = window.innerWidth, vh = window.innerHeight;
-      const s = Math.min(vw / WORLD.w, vh / WORLD.h);
-      scale = s; offsetX = (vw - WORLD.w * s)/2; offsetY = (vh - WORLD.h * s)/2;
-      canvas.style.width = WORLD.w * s + 'px';
-      canvas.style.height = WORLD.h * s + 'px';
-    }
-    window.addEventListener('resize', fit); fit();
-
-    /* ======== INPUT ========= */
-    let isDown = false, justReleased = false, wasInhaling = false;
-    let inhaleSfxTimer = 0;
-    function withinCanvas(clientX, clientY){
-      const x = (clientX - offsetX) / scale, y = (clientY - offsetY) / scale;
-      return (x >= 0 && x <= WORLD.w && y >= 0 && y <= WORLD.h);
-    }
-    canvas.addEventListener('pointerdown', async (e) => {
-      if (!withinCanvas(e.clientX, e.clientY)) return;
-      if (audioCtx.state === "suspended") await audioCtx.resume();
-      isDown = true; e.preventDefault(); hint.style.display = 'none';
-    });
-    window.addEventListener('pointerup', (e) => {
-      if (!isDown) return;
-      isDown = false; justReleased = true; e.preventDefault();
-    });
-
-    /* ======== ENTIDADES ========= */
-    const player = { x: 160, y: WORLD.h - 160, r: 34, state: 'calmado', vy: 0, mareo: 0 };
-    const sueloScroll = [ { x: 0 }, { x: WORLD.w } ];
-    const obstacles = [], bananas = [], pulses = [], particles = [];
-    const CLOUD = { list: [] };
-
-    /* ======== UTIL ========= */
-    const rand = (a,b) => a + Math.random()*(b-a);
-    const chance = (p) => Math.random() < p;
-    function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
-
-    /* ======== IMÁGENES ========= */
     const IMG = { fondos:{}, erizo:{}, obstaculos:[], banana:null, suelo:null, cuenco:null, nubes:[], contador:[], contadorGo:null };
-    function loadImage(src){ return new Promise(res => { const im = new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; }); }
-    async function loadAll() {
-      IMG.fondos.calc = await loadImage(ASSETS.fondos.calc);
-      IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto);
-      IMG.fondos.helado = await loadImage(ASSETS.fondos.helado);
-      currentBg = IMG.fondos.calc;
-
-      IMG.erizo.calmado   = await loadImage(ASSETS.erizo.calmado);
-      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
-      IMG.erizo.gritando  = await loadImage(ASSETS.erizo.gritando);
-      for (let src of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(src));
-      IMG.banana = await loadImage(ASSETS.banana);
-      IMG.suelo  = await loadImage(ASSETS.suelo);
-      IMG.cuenco = await loadImage(ASSETS.cuenco);
-      for (let src of ASSETS.nubes) IMG.nubes.push(await loadImage(src));
-      for (let src of ASSETS.contador) IMG.contador.push(await loadImage(src));
-      IMG.contadorGo = await loadImage(ASSETS.contadorGo);
+    function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; }); }
+    async function loadAll(){
+      IMG.fondos.calc=await loadImage(ASSETS.fondos.calc); IMG.fondos.desierto=await loadImage(ASSETS.fondos.desierto); IMG.fondos.helado=await loadImage(ASSETS.fondos.helado); currentBg=IMG.fondos.calc;
+      IMG.erizo.calmado=await loadImage(ASSETS.erizo.calmado); IMG.erizo.inhalando=await loadImage(ASSETS.erizo.inhalando); IMG.erizo.gritando=await loadImage(ASSETS.erizo.gritando);
+      for(const s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s));
+      IMG.banana=await loadImage(ASSETS.banana); IMG.suelo=await loadImage(ASSETS.suelo); IMG.cuenco=await loadImage(ASSETS.cuenco);
+      for(const s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
+      for(const s of ASSETS.contador) IMG.contador.push(await loadImage(s)); IMG.contadorGo=await loadImage(ASSETS.contadorGo);
     }
 
-    /* ======== NUBES ========= */
-    function initClouds() {
-      CLOUD.list = [];
-      for (let i = 0; i < 10; i++) {
-        const band = Math.floor(rand(0,3));
-        const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
-        CLOUD.list.push({ x: rand(0, WORLD.w), y: rand(50, WORLD.h/2), w: rand(80, 180), h: rand(50, 100), speed: 20 + band*40, band, img });
-      }
+    const CLOUD={list:[]}; function rand(a,b){return a+Math.random()*(b-a);}
+    function initClouds(){CLOUD.list=[];for(let i=0;i<10;i++){const band=Math.floor(rand(0,3));const img=IMG.nubes[Math.floor(Math.random()*IMG.nubes.length)]||null;CLOUD.list.push({x:rand(0,WORLD.w),y:rand(50,WORLD.h/2),w:rand(80,180),h:rand(50,100),speed:20+band*40,band,img});}}
+
+    const player={x:120,y:600,r:48,vy:0,state:"calmado",mareo:0};
+    const sueloScroll=[{x:0},{x:WORLD.w}]; let obstacles=[],bananas=[],pulses=[],particles=[];
+    let isDown=false,justReleased=false,wasInhaling=false,inhaleSfxTimer=0;
+    let lastFrame=performance.now(),loopId=null,gameOver=false;
+
+    function update(dt){
+      if(POINTS.total>=85&&bgStage<2){setTimeout(()=>playSfx("woosh",0.8),120);currentBg=IMG.fondos.helado;bgStage=2;}
+      else if(POINTS.total>=50&&bgStage<1){setTimeout(()=>playSfx("woosh",0.7),120);currentBg=IMG.fondos.desierto;bgStage=1;}
+
+      for(let s of sueloScroll){s.x-=SPEED.scroll*dt;if(s.x<=-WORLD.w) s.x+=WORLD.w*2;}
+      for(const c of CLOUD.list){c.x-=c.speed*dt;if(c.x+c.w<0){c.x=WORLD.w+rand(10,100);c.y=rand(50,WORLD.h/2);c.w=rand(80,180);c.h=rand(50,100);c.img=IMG.nubes[Math.floor(Math.random()*IMG.nubes.length)]||null;}}
+
+      SPAWN.timer+=dt;SPAWN.diffTimer+=dt;if(SPAWN.timer>=SPAWN.interval){SPAWN.timer=0;spawnObstacle();}
+      if(SPAWN.diffTimer>=10){SPAWN.diffTimer=0;SPEED.scroll=Math.min(SPEED.scroll+SPEED.inc,SPEED.max);SPAWN.interval=Math.max(SPAWN.min,SPAWN.interval-0.05);}
+
+      if(isDown&&CHARGE.cooldown<=0){player.state='inhalando';if(player.vy>220) player.vy*=0.5;const boost=(player.vy>0?1.5:1.0);player.vy+=PHYSICS.inhaleForce*boost*dt;CHARGE.value=Math.min(CHARGE.max,CHARGE.value+CHARGE.rate*dt);if(!wasInhaling){playSfx("inhalar",0.25);inhaleSfxTimer=0;}else{inhaleSfxTimer+=dt;if(inhaleSfxTimer>=0.5){playSfx("inhalar",0.25);inhaleSfxTimer=0;}}}wasInhaling=isDown&&CHARGE.cooldown<=0;
+      player.vy+=PHYSICS.gravity*dt;if(player.vy>PHYSICS.maxVy) player.vy=PHYSICS.maxVy;player.y+=player.vy*dt;const sueloTop=WORLD.h-GROUND_H-player.r;if(player.y>sueloTop){player.y=sueloTop;player.vy=0;}if(player.y<80){player.y=80;player.vy=0;}
+
+      if(justReleased){justReleased=false;if(CHARGE.cooldown<=0){if(CHARGE.value>=CHARGE.over){CHARGE.cooldown=0.7;CHARGE.value=0;player.state='gritando';}else{const t=CHARGE.value/CHARGE.max;const rad=PULSE.base+t*(PULSE.max-PULSE.base);pulses.push({x:player.x+40,y:player.y,rad,life:PULSE.life});CHARGE.cooldown=CHARGE.cooldownBase;CHARGE.value=0;player.state='gritando';playSfx("grito",0.85);}}inhaleSfxTimer=0;}
+
+      if(player.y>=sueloTop&&Math.abs(player.vy)>400&&player.state!=='mareado'){player.state='mareado';player.mareo=0;}
+      if(player.state==='gritando'){player.mareo+=dt;if(player.mareo>3){player.state='mareado';player.mareo=0;}}else if(player.mareo>0){player.mareo-=dt*0.5;}
+      if(CHARGE.cooldown>0){CHARGE.cooldown-=dt;if(CHARGE.cooldown<0)CHARGE.cooldown=0;}
+      if(!isDown&&CHARGE.cooldown===0&&player.state!=='mareado'){player.state='calmado';}
+
+      if(Math.random()<0.1){particles.push({x:player.x+rand(-20,20),y:player.y+rand(-20,20),vx:rand(-15,15),vy:rand(-30,-10),life:1.0,color:`rgba(255,${200+Math.floor(55*Math.random())},255,`});}
+      for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt*0.5;if(p.life<=0)particles.splice(i,1);}
+      for(let i=pulses.length-1;i>=0;i--){const p=pulses[i];p.life-=dt;if(p.life<=0){pulses.splice(i,1);continue;}for(let j=obstacles.length-1;j>=0;j--){const o=obstacles[j];const dx=p.x-o.x,dy=p.y-o.y;if(dx*dx+dy*dy<=(p.rad+o.r)**2){obstacles.splice(j,1);POINTS.total+=2;}}}
+      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.x-=o.speed*dt;if(o.x<-120) obstacles.splice(i,1);}
+      for(let i=bananas.length-1;i>=0;i--){const b=bananas[i];b.x-=b.speed*dt;if(b.x<-120)bananas.splice(i,1);}
+      for(const o of obstacles){const dx=o.x-player.x,dy=o.y-player.y;if(dx*dx+dy*dy<=(o.r+player.r)**2){playSfx("chocar",0.45);panelMsg.textContent=CRASH_MESSAGES[Math.floor(Math.random()*CRASH_MESSAGES.length)];panel.classList.add('show');gameOver=true;if(loopId)cancelAnimationFrame(loopId);return;}}
+      for(let i=bananas.length-1;i>=0;i--){const b=bananas[i];const dx=b.x-player.x,dy=b.y-player.y;if(dx*dx+dy*dy<=(b.r+player.r)**2){bananas.splice(i,1);if(b.kind==='cuenco'){POINTS.total+=5;playSfx("recolectar",0.9);}else{POINTS.total+=1;playSfx("recolectar",0.75);}}}
+      scoreEl.textContent="Puntos: "+POINTS.total;zenFill.style.width=(CHARGE.value/CHARGE.max)*100+"%";zenFill.parentElement.classList.toggle('cooldown',CHARGE.cooldown>0);
     }
 
-    /* ======== RESET ========= */
-    function reset() {
-      POINTS.total = 0; CHARGE.value = 0; CHARGE.cooldown = 0;
-      SPEED.scroll = 280; SPAWN.interval = 1.2; SPAWN.timer = 0; SPAWN.diffTimer = 0;
-      obstacles.length = 0; bananas.length = 0; pulses.length = 0; particles.length = 0;
-      player.y = WORLD.h - GROUND_H - player.r + 20; player.vy = 0; player.state = 'calmado'; player.mareo = 0;
-      panel.classList.remove('show'); hint.style.display = '';
-      bgStage = 0;
-      currentBg = IMG.fondos.calc;
-      initClouds();
-      gameOver = false;
-    }
-    btnRestart.addEventListener('click', () => {
-      reset();
-      lastFrame = performance.now();
-      requestAnimationFrame(frame);
-    });
+    function spawnObstacle(){const y=rand(240,WORLD.h-180);const r=rand(44,70);const speed=Math.min(SPEED.scroll+rand(0,60),SPEED.max);obstacles.push({x:WORLD.w+60,y,r,speed,kind:Math.floor(rand(0,IMG.obstaculos.length))});if(Math.random()<0.3)bananas.push({x:WORLD.w+100,y:rand(220,WORLD.h-200),r:44,speed:speed+40,kind:'banana'});if(Math.random()<0.1)bananas.push({x:WORLD.w+150,y:rand(220,WORLD.h-200),r:44,speed:speed+20,kind:'cuenco'});}
 
-    /* ======== UPDATE ========= */
-    function update(dt) {
-      if (POINTS.total >= 85 && bgStage < 2) {
-        setTimeout(()=> playSfx("woosh", 0.8), 120);
-        currentBg = IMG.fondos.helado;
-        bgStage = 2;
-      } else if (POINTS.total >= 50 && bgStage < 1) {
-        setTimeout(()=> playSfx("woosh", 0.7), 120);
-        currentBg = IMG.fondos.desierto;
-        bgStage = 1;
-      }
-
-      for (let s of sueloScroll) { s.x -= SPEED.scroll * dt; if (s.x <= -WORLD.w) s.x += WORLD.w * 2; }
-      for (const c of CLOUD.list) { c.x -= c.speed * dt; if (c.x + c.w < 0) { c.x = WORLD.w+rand(10,100); c.y = rand(50, WORLD.h/2); } }
-      SPAWN.timer += dt; SPAWN.diffTimer += dt;
-      if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; obstacles.push({ x: WORLD.w+60, y: rand(240, WORLD.h-180), r: rand(44,70), speed: Math.min(SPEED.scroll+rand(0,60), SPEED.max), kind: Math.floor(rand(0, IMG.obstaculos.length)) }); if (chance(0.3)) bananas.push({ x: WORLD.w+100, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+40, kind:'banana' }); if (chance(0.1)) bananas.push({ x: WORLD.w+150, y: rand(220, WORLD.h-200), r: 44, speed: SPEED.scroll+20, kind:'cuenco' }); }
-      if (SPAWN.diffTimer >= 15) { SPAWN.diffTimer = 0; SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05); SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max); }
-
-      if (isDown) {
-        CHARGE.value += CHARGE.rate * dt; if (CHARGE.value > CHARGE.max) CHARGE.value = CHARGE.max;
-        player.state = 'inhalando';
-        inhaleSfxTimer += dt; if (inhaleSfxTimer >= 0.5) { playSfx("inhalar",0.4); inhaleSfxTimer = 0; }
-        player.vy += PHYSICS.inhaleForce * dt * 0.04;
-        wasInhaling = true;
-      } else {
-        if (wasInhaling && justReleased) {
-          player.state = 'gritando'; playSfx("grito",0.8);
-          const pow = (CHARGE.value >= CHARGE.over) ? PULSE.max : PULSE.base + (CHARGE.value/CHARGE.max)*(PULSE.max-PULSE.base);
-          pulses.push({ x:player.x+player.r, y:player.y, r:pow, life:PULSE.life });
-          CHARGE.value=0; CHARGE.cooldown=CHARGE.cooldownBase;
-        } else player.state = 'calmado';
-        wasInhaling = false;
-      }
-      justReleased = false;
-
-      if (CHARGE.cooldown > 0) CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
-
-      player.vy += PHYSICS.gravity * dt; if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
-      player.y += player.vy * dt; if (player.y > WORLD.h - GROUND_H - player.r) { player.y = WORLD.h - GROUND_H - player.r; player.vy = 0; }
-
-      for (let i=obstacles.length-1; i>=0; i--){ const o=obstacles[i]; o.x -= o.speed*dt; if (o.x<-100) obstacles.splice(i,1); else { if (dist2(player.x,player.y,o.x,o.y) < (player.r+o.r)**2) { playSfx("chocar",0.8); gameOver = true; cancelAnimationFrame(loopId); panelMsg.textContent = CRASH_MESSAGES[Math.floor(Math.random()*CRASH_MESSAGES.length)]; panel.classList.add('show'); } } }
-      for (let i=bananas.length-1; i>=0; i--){ const b=bananas[i]; b.x -= b.speed*dt; if (b.x<-100) bananas.splice(i,1); else { if (dist2(player.x,player.y,b.x,b.y) < (player.r+b.r)**2){ bananas.splice(i,1); if (b.kind==='banana'){ POINTS.total+=1; playSfx("recolectar",0.6);} else if (b.kind==='cuenco'){ POINTS.total+=5; playSfx("recolectar",0.9);} } } }
-      for (let i=pulses.length-1; i>=0; i--){ const p=pulses[i]; p.life-=dt; if (p.life<=0) pulses.splice(i,1); }
-      scoreEl.textContent = "Puntos: "+POINTS.total;
-      zenFill.style.width = (CHARGE.value/CHARGE.max*100)+"%"; zenFill.parentNode.classList.toggle('cooldown', CHARGE.cooldown>0);
-    }
-
-    /* ======== DRAW ========= */
-    function draw() {
+    function draw(){
       ctx.clearRect(0,0,WORLD.w,WORLD.h);
-      if (currentBg) ctx.drawImage(currentBg,0,0,WORLD.w,WORLD.h);
-      for (const c of CLOUD.list) if (c.img) ctx.drawImage(c.img,c.x,c.y,c.w,c.h);
-      for (const o of obstacles) { const im=IMG.obstaculos[o.kind]; if(im) ctx.drawImage(im,o.x-o.r,o.y-o.r,o.r*2,o.r*2); else { ctx.fillStyle="#f87171"; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill(); } }
-      for (const b of bananas) { let im=null; if(b.kind==='banana') im=IMG.banana; else if(b.kind==='cuenco') im=IMG.cuenco; if(im) ctx.drawImage(im,b.x-b.r,b.y-b.r,b.r*2,b.r*2); }
-      for (const p of pulses) { ctx.fillStyle="rgba(255,255,255,"+(p.life/PULSE.life*0.4)+")"; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }
-      const im = IMG.erizo[player.state]; if (im) ctx.drawImage(im,player.x-player.r,player.y-player.r,player.r*2,player.r*2); else { ctx.fillStyle="#facc15"; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill(); }
-      for (const s of sueloScroll) if (IMG.suelo) ctx.drawImage(IMG.suelo,s.x,WORLD.h-GROUND_H,WORLD.w,GROUND_H);
+      if(currentBg)ctx.drawImage(currentBg,0,0,WORLD.w,WORLD.h);else{ctx.fillStyle='#1b1b1f';ctx.fillRect(0,0,WORLD.w,WORLD.h);}
+      if(gameOver)return;
+      for(let pass=0;pass<3;pass++){for(const c of CLOUD.list){if(c.band!==pass)continue;if(c.img)ctx.drawImage(c.img,c.x,c.y,c.w,c.h);else{ctx.fillStyle='rgba(255,255,255,.85)';ctx.beginPath();ctx.ellipse(c.x+c.w/2,c.y+c.h/2,c.w/2,c.h/3,0,0,Math.PI*2);ctx.fill();}}}
+      for(const b of bananas){if(b.kind==='cuenco'&&IMG.cuenco)ctx.drawImage(IMG.cuenco,b.x-b.r,b.y-b.r,b.r*2,b.r*2);else if(IMG.banana)ctx.drawImage(IMG.banana,b.x-b.r,b.y-b.r,b.r*2,b.r*2);}
+      for(const o of obstacles){const img=IMG.obstaculos[o.kind];if(img)ctx.drawImage(img,o.x-o.r,o.y-o.r,o.r*2,o.r*2);}
+      for(const p of pulses){const alpha=Math.max(0,p.life/PULSE.life);ctx.strokeStyle=`rgba(99,102,241,${alpha})`;ctx.lineWidth=6;ctx.beginPath();ctx.arc(p.x,p.y,p.rad,0,Math.PI*2);ctx.stroke();}
+      for(let s of sueloScroll){if(IMG.suelo)ctx.drawImage(IMG.suelo,s.x,WORLD.h-GROUND_H,WORLD.w,GROUND_H);}
+      for(const p of particles){ctx.fillStyle=p.color+p.life+")";ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}
+      const pulse=0.6+0.2*Math.sin(performance.now()/300);ctx.fillStyle=`rgba(255,255,255,${0.25*pulse})`;ctx.beginPath();ctx.arc(player.x,player.y,60,0,Math.PI*2);ctx.fill();
+      let img=IMG.erizo.calmado;if(player.state==='inhalando')img=IMG.erizo.inhalando;if(player.state==='gritando')img=IMG.erizo.gritando;if(img)ctx.drawImage(img,player.x-player.r,player.y-player.r,player.r*2,player.r*2);
     }
 
-    /* ======== LOOP ========= */
-    let lastFrame = performance.now();
-    let loopId = null;
-    let gameOver = false;
-    function frame(now) {
-      const dt = Math.min(0.033, (now - lastFrame)/1000);
-      lastFrame = now;
-      if (!gameOver) {
-        update(dt); draw(); loopId=requestAnimationFrame(frame);
-      } else {
-        ctx.clearRect(0,0,WORLD.w,WORLD.h);
-        if (currentBg) ctx.drawImage(currentBg,0,0,WORLD.w,WORLD.h);
-      }
-    }
+    function reset(){POINTS.total=0;CHARGE.value=0;CHARGE.cooldown=0;SPEED.scroll=280;SPAWN.interval=1.2;SPAWN.timer=0;SPAWN.diffTimer=0;obstacles=[];bananas=[];pulses=[];particles=[];player.y=WORLD.h-GROUND_H-player.r+20;player.vy=0;player.state='calmado';player.mareo=0;panel.classList.remove('show');hint.style.display='';bgStage=0;currentBg=IMG.fondos.calc;initClouds();gameOver=false;}
 
-    /* ======== START ========= */
-    loadAll().then(() => {
-      const loader = document.getElementById('loader');
-      const loaderImg = document.getElementById('loaderImg');
-      const loaderImgs = ["assets/loader.png","assets/loader1.png","assets/loader2.png","assets/loader3.png"];
-      loaderImg.src = loaderImgs[Math.floor(Math.random()*loaderImgs.length)];
-      setTimeout(()=>{loader.style.display="none";},1800);
+    function frame(now){const dt=Math.min(0.033,(now-lastFrame)/1000);lastFrame=now;if(!gameOver){update(dt);draw();loopId=requestAnimationFrame(frame);}else{ctx.clearRect(0,0,WORLD.w,WORLD.h);if(currentBg)ctx.drawImage(currentBg,0,0,WORLD.w,WORLD.h);}}
 
-      const menuPanel = document.getElementById('menuPanel');
-      const btnStart  = document.getElementById('btnStart');
-      const countdownEl = document.getElementById('countdown');
-      const countNum = document.getElementById('countNum');
+    btnRestart.addEventListener('click',()=>{reset();lastFrame=performance.now();requestAnimationFrame(frame);});
 
-      function showCountdown(onDone) {
-        let pool=[...ASSETS.contador]; let seq=[];
-        for(let i=0;i<3;i++){const idx=Math.floor(Math.random()*pool.length); seq.push(pool.splice(idx,1)[0]);}
-        seq.push(ASSETS.contadorGo);
-        let i=0; countdownEl.classList.add('show');
-        function showNext(){
-          if(i<seq.length){
-            countNum.innerHTML=`<img src="${seq[i]}" alt="count">`;
-            playSfx("gong",0.7);
-            i++; setTimeout(showNext,1000);
-          }else{
-            countdownEl.classList.remove('show');
-            if(typeof onDone==="function") onDone();
-          }
-        }
-        showNext();
-      }
+    canvas.addEventListener('pointerdown',async e=>{if(audioCtx.state==='suspended')await audioCtx.resume();isDown=true;e.preventDefault();hint.style.display='none';});
+    window.addEventListener('pointerup',e=>{if(!isDown)return;isDown=false;justReleased=true;e.preventDefault();});
 
-      let started=false;
-      function startGame(){
-        if(started) return;
-        started=true;
-        reset();
-        requestAnimationFrame(frame);
-      }
-      if(btnStart){
-        btnStart.addEventListener('click',()=>{ menuPanel.classList.remove('show'); showCountdown(()=>{startGame();}); });
-      }
+    loadAll().then(()=>{const loader=document.getElementById('loader');const loaderImg=document.getElementById('loaderImg');const imgs=["assets/loader.png","assets/loader1.png","assets/loader2.png","assets/loader3.png"];loaderImg.src=imgs[Math.floor(Math.random()*imgs.length)];setTimeout(()=>loader.style.display="none",1800);
+      const menuPanel=document.getElementById('menuPanel');const btnStart=document.getElementById('btnStart');const countdownEl=document.getElementById('countdown');const countNum=document.getElementById('countNum');
+      function showCountdown(onDone){let pool=[...ASSETS.contador];let seq=[];for(let i=0;i<3;i++){const idx=Math.floor(Math.random()*pool.length);seq.push(pool.splice(idx,1)[0]);}seq.push(ASSETS.contadorGo);let i=0;countdownEl.classList.add('show');function next(){if(i<seq.length){countNum.innerHTML=`<img src="${seq[i]}" alt="count">`;playSfx("gong",0.7);i++;setTimeout(next,1000);}else{countdownEl.classList.remove('show');if(onDone)onDone();}}next();}
+      if(btnStart){btnStart.addEventListener('click',()=>{menuPanel.classList.remove('show');showCountdown(()=>{reset();requestAnimationFrame(frame);});});}
     });
   })();
   </script>
