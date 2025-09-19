@@ -18,9 +18,7 @@
     .fill { height:100%; width:0%; background:#86efac; transition: width .08s linear; }
     .cooldown { opacity:.45; }
     .score { min-width:100px; text-align:right; }
-    .hud-btn {
-      pointer-events:auto; cursor:pointer; padding:4px 8px; background:#24242a; border-radius:6px; font-size:13px;
-    }
+    .hud-btn { pointer-events:auto; cursor:pointer; padding:4px 8px; background:#24242a; border-radius:6px; font-size:13px; }
     .toast {
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
       background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9;
@@ -53,13 +51,7 @@
     }
     @keyframes zoomIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     /* Loader */
-    #loader {
-      position:fixed; inset:0;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      background:#0e0e10;
-      z-index:2000;
-    }
+    #loader { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0e0e10; z-index:2000; }
     #loader img { max-width: 200px; animation: float 1.8s ease-in-out infinite; }
     #loader p { margin-top: 12px; font-size: 18px; color: #6ee7b7; font-weight: bold; animation: blink 1.2s infinite; }
     @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
@@ -127,9 +119,20 @@
 
     const MUSIC={ base:new Audio("assets/musica_base.mp3"), bonus:new Audio("assets/musica_bonus.mp3"), boss:new Audio("assets/musica_boss.mp3") };
     for(let k in MUSIC){ MUSIC[k].loop=true; MUSIC[k].volume=0.4; }
-    let currentMusic=MUSIC.base, musicEnabled=true;
-    function playMusic(track){ if(!musicEnabled)return; if(currentMusic)currentMusic.pause(); currentMusic=track; currentMusic.play().catch(()=>{});}
-    function toggleMusic(){ musicEnabled=!musicEnabled; if(musicEnabled){ playMusic(currentMusic); btnMusic.textContent="🔊";} else { if(currentMusic)currentMusic.pause(); btnMusic.textContent="🔇";}}
+    let currentMusic=MUSIC.base, musicEnabled=true, musicStarted=false;
+
+    function playMusic(track){
+      if(!musicEnabled) return;
+      if(currentMusic) currentMusic.pause();
+      currentMusic=track;
+      currentMusic.currentTime=0;
+      currentMusic.play().catch(()=>{});
+    }
+    function toggleMusic(){
+      musicEnabled=!musicEnabled;
+      if(musicEnabled){ playMusic(currentMusic); btnMusic.textContent="🔊";}
+      else { if(currentMusic) currentMusic.pause(); btnMusic.textContent="🔇";}
+    }
 
     // ========= ASSETS =========
     const ASSETS={ fondos:{calc:"assets/fondo_calc.png", desierto:"assets/fondo_desierto.png", helado:"assets/fondo_helado.png"}, erizo:{calmado:"assets/calmado.png", inhalando:"assets/respirando.png", gritando:"assets/gritando.png"}, obstaculos:["assets/paraguas.png","assets/helado_meditando.png"], banana:"assets/platano_puntos.png", suelo:"assets/suelo.png", cuenco:"assets/cuenco_tibetano.png", nubes:["assets/nubes/nube1.png","assets/nubes/nube2.png","assets/nubes/nube3.png","assets/nubes/nube4.png"] };
@@ -137,7 +140,6 @@
     const canvas=document.getElementById("game"), ctx=canvas.getContext("2d");
     const scoreEl=document.getElementById("score"), bestScoreEl=document.getElementById("bestScore"), menuBestEl=document.getElementById("menuBest");
     const zenFill=document.getElementById("zenFill"), btnMusic=document.getElementById("btnMusic");
-
     btnMusic.addEventListener("click", toggleMusic);
 
     const panel=document.getElementById("panel"), panelMsg=document.getElementById("panelMsg"), btnRestart=document.getElementById("btnRestart"), hint=document.getElementById("hint"), menuPanel=document.getElementById("menuPanel"), btnStart=document.getElementById("btnStart"), countdownEl=document.getElementById("countdown"), countNum=document.getElementById("countNum");
@@ -184,9 +186,12 @@
 
     function draw(){ ctx.clearRect(0,0,WORLD.w,WORLD.h); if(currentBg) ctx.drawImage(currentBg,0,0,WORLD.w,WORLD.h); if(gameOver) return; for(const c of CLOUD.list) if(c.img) ctx.drawImage(c.img,c.x,c.y,c.w,c.h); for(const b of bananas) ctx.drawImage(b.kind==="cuenco"?IMG.cuenco:IMG.banana,b.x-b.r,b.y-b.r,b.r*2,b.r*2); for(const o of obstacles) ctx.drawImage(IMG.obstaculos[o.kind],o.x-o.r,o.y-o.r,o.r*2,o.r*2); for(const p of pulses){ const a=p.life/PULSE.life; ctx.strokeStyle=`rgba(99,102,241,${a})`; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(p.x,p.y,p.rad,0,Math.PI*2); ctx.stroke();} for(const s of sueloScroll) ctx.drawImage(IMG.suelo,s.x,WORLD.h-GROUND_H,WORLD.w,GROUND_H); const im=IMG.erizo[player.state]||IMG.erizo.calmado; if(im) ctx.drawImage(im,player.x-player.r,player.y-player.r,player.r*2,player.r*2);}
     function frame(ts){const dt=(ts-lastFrame)/1000; lastFrame=ts; update(dt); draw(); loopId=requestAnimationFrame(frame);}
-    btnRestart.addEventListener("click",()=>{reset(); lastFrame=performance.now(); requestAnimationFrame(frame); playMusic(MUSIC.base);});
+
+    btnRestart.addEventListener("click",()=>{reset(); lastFrame=performance.now(); requestAnimationFrame(frame); if(!musicStarted){ playMusic(MUSIC.base); musicStarted=true; }});
+
     function showCountdown(cb){const imgs=["assets/contador_arbol.png","assets/contador_calcetin.png","assets/contador_leche.png","assets/contador_cuenco.png","assets/contador_antena.png","assets/contador_seta.png","assets/contador_coche.png","assets/contador_lapiz.png","assets/contador_paraguas.png","assets/contador_helado.png"]; const go="assets/contador_go.png"; let pool=[...imgs],seq=[]; for(let i=0;i<3;i++){const idx=Math.floor(Math.random()*pool.length); seq.push(pool.splice(idx,1)[0]);} seq.push(go); let i=0; countdownEl.classList.add("show"); function step(){ if(i<seq.length){ countNum.innerHTML=`<img src="${seq[i]}">`; playSfx("gong",0.7); i++; setTimeout(step,1000);} else { countdownEl.classList.remove("show"); cb();}} step();}
-    loadAll().then(()=>{document.getElementById("loader").style.display="none"; btnStart.addEventListener("click",()=>{ menuPanel.classList.remove("show"); showCountdown(()=>{ reset(); lastFrame=performance.now(); playMusic(MUSIC.base); requestAnimationFrame(frame);});});});
+
+    loadAll().then(()=>{document.getElementById("loader").style.display="none"; btnStart.addEventListener("click",()=>{ menuPanel.classList.remove("show"); showCountdown(()=>{ reset(); lastFrame=performance.now(); if(!musicStarted){ playMusic(MUSIC.base); musicStarted=true; } requestAnimationFrame(frame);});});});
     canvas.addEventListener("pointerdown",()=>isDown=true); canvas.addEventListener("pointerup",()=>{isDown=false; justReleased=true;});
   })();
   </script>
