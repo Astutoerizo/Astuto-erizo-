@@ -6,7 +6,8 @@
   <title>Astuto Erizo - Respira y Grita</title>
   <style>
     html, body {
-      margin:0; height:100%; background:#0e0e10; color:#fff;
+      margin:0; height:100%;
+      background:#0e0e10; color:#fff;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
     #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
@@ -18,19 +19,16 @@
       font-weight:600;
     }
     .bar { flex:1; height:14px; background:#3a3a44; border-radius:999px; overflow:hidden;
-      border:2px solid #6ee7b7; box-shadow:0 0 6px rgba(110,231,183,0.6) inset;
-    }
+      border:2px solid #6ee7b7; box-shadow:0 0 6px rgba(110,231,183,0.6) inset; }
     .fill { height:100%; width:0%; background:#86efac; transition: width .08s linear; }
     .cooldown { opacity:.45; }
     .score { min-width:100px; text-align:right; }
-    .hud-btn {
-      pointer-events:auto; cursor:pointer; padding:4px 8px; background:#24242a;
-      border-radius:6px; font-size:13px;
-    }
+    .hud-btn { pointer-events:auto; cursor:pointer; padding:4px 8px;
+      background:#24242a; border-radius:6px; font-size:13px; }
     .toast {
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-      background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px;
-      font-size:14px; opacity:.9;
+      background:#24242a; border:1px solid #333;
+      padding:8px 12px; border-radius:10px; font-size:14px; opacity:.9;
     }
     .panel {
       position:fixed; inset:0; display:none; align-items:center; justify-content:center;
@@ -38,36 +36,32 @@
     }
     .panel.show { display:flex; opacity:1; pointer-events:auto; }
     .card {
-      background:#1e1e24; border:1px solid #333; border-radius:16px; padding:20px;
-      width:min(92vw, 420px); text-align:center;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      background:#1e1e24; border:1px solid #333; border-radius:16px;
+      padding:20px; width:min(92vw, 420px); text-align:center;
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
     }
     .btn {
-      display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px;
-      background:#6ee7b7; color:#0b0b0d; font-weight:700; cursor:pointer;
+      display:inline-block; margin-top:12px; padding:10px 16px;
+      border-radius:12px; background:#6ee7b7; color:#0b0b0d;
+      font-weight:700; cursor:pointer; user-select:none;
     }
-    #countdown {
-      position: fixed; inset: 0;
-      display: none; align-items: center; justify-content: center;
-      background: rgba(0,0,0,.45); backdrop-filter: blur(2px);
-      z-index: 999;
-    }
-    #countdown.show { display: flex; }
+    /* Cuenta atrás */
+    #countdown { position: fixed; inset: 0; display:none; align-items:center; justify-content:center;
+      background: rgba(0,0,0,.45); backdrop-filter: blur(2px); z-index:999; }
+    #countdown.show { display:flex; }
     #countdown #countNum img {
-      max-width: 60%; height: auto;
-      display: block; margin: 0 auto;
-      animation: zoomIn 0.6s ease;
+      max-width: 60%; height:auto; display:block; margin:0 auto; animation: zoomIn 0.6s ease;
     }
-    @keyframes zoomIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes zoomIn { from {transform:scale(0.5); opacity:0;} to {transform:scale(1); opacity:1;} }
+    /* Loader */
     #loader {
       position:fixed; inset:0; display:flex; flex-direction:column;
-      align-items:center; justify-content:center; background:#0e0e10;
-      z-index:2000;
+      align-items:center; justify-content:center; background:#0e0e10; z-index:2000;
     }
-    #loader img { max-width: 200px; animation: float 1.8s ease-in-out infinite; }
-    #loader p { margin-top: 12px; font-size: 18px; color: #6ee7b7; font-weight: bold; animation: blink 1.2s infinite; }
-    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    #loader img { max-width:200px; animation: float 1.8s ease-in-out infinite; }
+    #loader p { margin-top:12px; font-size:18px; color:#6ee7b7; font-weight:bold; animation:blink 1.2s infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-18px);} }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
   </style>
 </head>
 <body>
@@ -98,7 +92,7 @@
 
   <div class="panel show" id="menuPanel">
     <div class="card">
-      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width: 280px; margin-bottom: 12px;">
+      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width:280px; margin-bottom:12px;">
       <h2>Respira y Grita</h2>
       <p id="menuBest">Mejor puntuación: 0</p>
       <p>Cuando estés listo, pulsa jugar y respira profundo…</p>
@@ -109,241 +103,205 @@
 
   <div id="countdown"><div id="countNum"></div></div>
 
-<script>
-(() => {
-  const WORLD = { w: 540, h: 960 };
-  const SPEED = { scroll: 280, inc: 20, max: 520 };
-  const SPAWN = { interval: 1.2, min: 0.7, timer: 0, diffTimer: 0 };
-  const CHARGE = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
-  const PULSE = { base:120, max:380, life:0.25 };
-  const POINTS = { total:0, best: parseInt(localStorage.getItem("bestScore")||"0") };
-  const PHYSICS = { gravity:600, inhaleForce:-1100, maxVy:500 };
-  const GROUND_H = 180;
+  <script>
+  (() => {
+    const WORLD={w:540,h:960}, SPEED={scroll:280,inc:20,max:520},
+          SPAWN={interval:1.2,min:0.7,timer:0,diffTimer:0},
+          CHARGE={value:0,rate:60,max:100,over:85,cooldown:0,cooldownBase:1.0},
+          PULSE={base:120,max:380,life:0.25},
+          POINTS={total:0,best:parseInt(localStorage.getItem("bestScore")||"0")},
+          PHYSICS={gravity:600,inhaleForce:-1100,maxVy:500},
+          GROUND_H=180;
 
-  let bgStage = 0, currentBg = null, gameOver=false, loopId=null;
-  let isDown=false, justReleased=false, wasInhaling=false, inhaleSfxTimer=0;
-  let lastFrame=0, playerScale=1, scaleVel=0;
+    let bgStage=0,currentBg=null,gameOver=false,loopId=null;
+    let isDown=false,justReleased=false,wasInhaling=false,inhaleSfxTimer=0,lastFrame=0;
 
-  const SFX={ grito:"assets/sonido_bowl_limpio.mp3", recolectar:"assets/sonido_recolectar_platano.mp3", inhalar:"assets/sonido_inhalar.mp3", chocar:"assets/sonido_chocar.mp3", woosh:"assets/woosh.mp3", gong:"assets/gong.mp3"};
-  function playSfx(name,v=1){ const a=new Audio(SFX[name]); a.volume=v; a.play().catch(()=>{}); }
-
-  const MUSIC={ base:new Audio("assets/musica_base.mp3") };
-  for(let k in MUSIC){ MUSIC[k].loop=true; MUSIC[k].volume=0.4; }
-  let currentMusic=MUSIC.base, musicEnabled=true;
-  function playMusic(track){ if(!musicEnabled)return; if(currentMusic)currentMusic.pause(); currentMusic=track; currentMusic.play().catch(()=>{});}
-  function toggleMusic(){ musicEnabled=!musicEnabled; if(musicEnabled){ playMusic(currentMusic); btnMusic.textContent="🔊";} else { if(currentMusic)currentMusic.pause(); btnMusic.textContent="🔇";}}
-
-  const ASSETS={ fondos:{calc:"assets/fondo_calc.png", desierto:"assets/fondo_desierto.png", helado:"assets/fondo_helado.png"}, erizo:{calmado:"assets/calmado.png", parpadeo:"assets/erizo_parpadeo.png", inhalando:"assets/respirando.png", gritando:"assets/gritando.png"}, obstaculos:["assets/paraguas.png","assets/helado_meditando.png"], banana:"assets/platano_puntos.png", suelo:"assets/suelo.png", cuenco:"assets/cuenco_tibetano.png", nubes:["assets/nubes/nube1.png","assets/nubes/nube2.png","assets/nubes/nube3.png","assets/nubes/nube4.png"] };
-
-  const canvas=document.getElementById("game"), ctx=canvas.getContext("2d");
-  const scoreEl=document.getElementById("score"), bestScoreEl=document.getElementById("bestScore"), menuBestEl=document.getElementById("menuBest");
-  const zenFill=document.getElementById("zenFill"), btnMusic=document.getElementById("btnMusic");
-
-  btnMusic.addEventListener("click", toggleMusic);
-
-  const panel=document.getElementById("panel"), panelMsg=document.getElementById("panelMsg"), btnRestart=document.getElementById("btnRestart"), hint=document.getElementById("hint"), menuPanel=document.getElementById("menuPanel"), btnStart=document.getElementById("btnStart"), countdownEl=document.getElementById("countdown"), countNum=document.getElementById("countNum");
-
-  function updateBestScoreDisplay(){ bestScoreEl.textContent="Mejor: "+POINTS.best; menuBestEl.textContent="Mejor puntuación: "+POINTS.best;}
-  updateBestScoreDisplay();
-
-  const player={x:140,y:WORLD.h-300,vy:0,r:50,state:"calmado",mareo:0,blinkTimer:rand(2,5)};
-  const sueloScroll=[{x:0},{x:WORLD.w}], obstacles=[], bananas=[], pulses=[];
-  const CLOUD={list:[]};
-
-  function rand(a,b){return a+Math.random()*(b-a);}
-  function chance(p){return Math.random()<p;}
-  function dist2(ax,ay,bx,by){const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
-
-  const IMG={fondos:{},erizo:{},obstaculos:[],banana:null,suelo:null,cuenco:null,nubes:[]};
-  function loadImage(s){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=s;});}
-  async function loadAll(){ IMG.fondos.calc=await loadImage(ASSETS.fondos.calc); IMG.fondos.desierto=await loadImage(ASSETS.fondos.desierto); IMG.fondos.helado=await loadImage(ASSETS.fondos.helado); currentBg=IMG.fondos.calc; for(const k in ASSETS.erizo){ IMG.erizo[k]=await loadImage(ASSETS.erizo[k]); } for(let s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s)); IMG.banana=await loadImage(ASSETS.banana); IMG.suelo=await loadImage(ASSETS.suelo); IMG.cuenco=await loadImage(ASSETS.cuenco); for(let s of ASSETS.nubes) IMG.nubes.push(await loadImage(s)); }
-
-  function initClouds(){ CLOUD.list=[]; for(let i=0;i<10;i++){ CLOUD.list.push({x:rand(0,WORLD.w),y:rand(50,WORLD.h/2),w:rand(80,180),h:rand(50,100),speed:20+Math.floor(rand(0,3))*40,img:IMG.nubes[Math.floor(rand(0,IMG.nubes.length))]});}}
-  function reset(){
-    POINTS.total=0; CHARGE.value=0; CHARGE.cooldown=0;
-    SPEED.scroll=280; SPAWN.interval=1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
-    obstacles.length=0; bananas.length=0; pulses.length=0;
-    player.y=WORLD.h-GROUND_H-player.r+20;
-    player.vy=0; player.state="calmado"; player.mareo=0; player.blinkTimer=rand(2,5);
-    panel.classList.remove("show"); hint.style.display="";
-    bgStage=0; currentBg=IMG.fondos.calc; initClouds(); gameOver=false;
-  }
-
-  function onGameOver(){
-    gameOver=true;
-    if(POINTS.total>POINTS.best){
-      POINTS.best=POINTS.total;
-      localStorage.setItem("bestScore",POINTS.best);
-      updateBestScoreDisplay();
-    }
-  }
-
-  function spawnObstacle(){
-    const y=rand(240,WORLD.h-180), r=rand(44,70),
-    sp=Math.min(SPEED.scroll+rand(0,60),SPEED.max);
-    obstacles.push({x:WORLD.w+60,y,r,speed:sp,kind:Math.floor(rand(0,IMG.obstaculos.length))});
-    if(chance(0.3))
-      bananas.push({x:WORLD.w+100,y:rand(220,WORLD.h-200),r:44,speed:sp+40,kind:"banana"});
-    if(chance(0.1))
-      bananas.push({x:WORLD.w+150,y:rand(220,WORLD.h-200),r:44,speed:sp+20,kind:"cuenco"});
-  }
-
-  function update(dt){
-    if(POINTS.total>=85&&bgStage<2){ setTimeout(()=>playSfx("woosh",0.8),120); currentBg=IMG.fondos.helado; bgStage=2; }
-    else if(POINTS.total>=50&&bgStage<1){ setTimeout(()=>playSfx("woosh",0.7),120); currentBg=IMG.fondos.desierto; bgStage=1; }
-
-    for(let s of sueloScroll){ s.x-=SPEED.scroll*dt; if(s.x<=-WORLD.w) s.x+=WORLD.w*2; }
-    for(const c of CLOUD.list){ c.x-=c.speed*dt; if(c.x+c.w<0){ c.x=WORLD.w+rand(10,100); c.y=rand(50,WORLD.h/2); c.w=rand(80,180); c.h=rand(50,100); c.img=IMG.nubes[Math.floor(rand(0,IMG.nubes.length))]; }}
-
-    SPAWN.timer+=dt; SPAWN.diffTimer+=dt;
-    if(SPAWN.timer>=SPAWN.interval){ SPAWN.timer=0; spawnObstacle(); }
-    if(SPAWN.diffTimer>=10){ SPAWN.diffTimer=0; SPEED.scroll=Math.min(SPEED.scroll+SPEED.inc,SPEED.max); SPAWN.interval=Math.max(SPAWN.min,SPAWN.interval-0.05); }
-
-    // === Movimiento del erizo ===
-    if(isDown&&CHARGE.cooldown<=0){
-      player.state="inhalando";
-      player.vy+=PHYSICS.inhaleForce*dt*1.2; // más sensible al toque
-      CHARGE.value=Math.min(CHARGE.max,CHARGE.value+CHARGE.rate*dt);
-      if(!wasInhaling){ playSfx("inhalar",0.25); inhaleSfxTimer=0; }
-      else { inhaleSfxTimer+=dt; if(inhaleSfxTimer>=0.5){ playSfx("inhalar",0.25); inhaleSfxTimer=0; }}
-    }
-    wasInhaling=isDown&&CHARGE.cooldown<=0;
-
-    player.vy+=PHYSICS.gravity*dt;
-    if(player.vy>PHYSICS.maxVy) player.vy=PHYSICS.maxVy;
-    player.y+=player.vy*dt;
-    const sueloTop=WORLD.h-GROUND_H-player.r;
-    if(player.y>sueloTop){ player.y=sueloTop; player.vy*=-0.25; } // rebote visual suave
-    if(player.y<80){ player.y=80; player.vy=0; }
-
-    // === Parpadeo del erizo ===
-    player.blinkTimer-=dt;
-    if(player.blinkTimer<=0){
-      player.state = player.state==="calmado" ? "parpadeo" : player.state;
-      if(player.state==="parpadeo") setTimeout(()=>player.state="calmado",200);
-      player.blinkTimer=rand(2.5,5.5);
+    const SFX={
+      grito:"assets/sonido_bowl_limpio.mp3",
+      recolectar:"assets/sonido_recolectar_platano.mp3",
+      inhalar:"assets/sonido_inhalar.mp3",
+      chocar:"assets/sonido_chocar.mp3",
+      woosh:"assets/woosh.mp3",
+      gong:"assets/gong.mp3"
+    };
+    function playSfx(name,vol=1){
+      if(gameOver) return;
+      const src=SFX[name]; if(!src) return;
+      const a=new Audio(src); a.volume=vol;
+      a.play().catch(()=>{});
     }
 
-    // === Grito ===
-    if(justReleased){
-      justReleased=false;
-      if(CHARGE.cooldown<=0){
-        if(CHARGE.value>=CHARGE.over){
-          CHARGE.cooldown=0.7; CHARGE.value=0; player.state="gritando";
-        } else {
-          const t=CHARGE.value/CHARGE.max, rad=PULSE.base+t*(PULSE.max-PULSE.base);
+    // grito con fade suave (solo cuando no hay gameOver)
+    function playGrito(){
+      if(gameOver) return;
+      try{
+        const ctx=new AudioContext();
+        const src=ctx.createBufferSource();
+        fetch(SFX.grito).then(r=>r.arrayBuffer()).then(b=>ctx.decodeAudioData(b)).then(buf=>{
+          src.buffer=buf;
+          const gain=ctx.createGain();
+          gain.gain.setValueAtTime(0,ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.35,ctx.currentTime+0.05);
+          gain.gain.linearRampToValueAtTime(0,ctx.currentTime+0.35);
+          src.connect(gain).connect(ctx.destination);
+          src.start();
+        });
+      }catch(e){}
+    }
+
+    const MUSIC={ base:new Audio("assets/musica_base.mp3") };
+    MUSIC.base.loop=true; MUSIC.base.volume=0.4;
+    let currentMusic=MUSIC.base,musicEnabled=true;
+    function playMusic(track){ if(!musicEnabled)return; if(currentMusic)currentMusic.pause(); currentMusic=track; currentMusic.play().catch(()=>{});}
+    function toggleMusic(){
+      musicEnabled=!musicEnabled;
+      if(musicEnabled){ playMusic(currentMusic); btnMusic.textContent="🔊";}
+      else { if(currentMusic)currentMusic.pause(); btnMusic.textContent="🔇";}
+    }
+
+    const ASSETS={ fondos:{calc:"assets/fondo_calc.png",desierto:"assets/fondo_desierto.png",helado:"assets/fondo_helado.png"},
+      erizo:{calmado:"assets/calmado.png",inhalando:"assets/respirando.png",gritando:"assets/gritando.png",parpadeo:"assets/erizo_parpadeo.png"},
+      obstaculos:["assets/paraguas.png","assets/helado_meditando.png"], banana:"assets/platano_puntos.png", suelo:"assets/suelo.png", cuenco:"assets/cuenco_tibetano.png",
+      nubes:["assets/nubes/nube1.png","assets/nubes/nube2.png","assets/nubes/nube3.png","assets/nubes/nube4.png"] };
+
+    const canvas=document.getElementById("game"), ctx=canvas.getContext("2d"),
+          scoreEl=document.getElementById("score"), bestScoreEl=document.getElementById("bestScore"),
+          menuBestEl=document.getElementById("menuBest"), zenFill=document.getElementById("zenFill"),
+          btnMusic=document.getElementById("btnMusic"), panel=document.getElementById("panel"),
+          panelMsg=document.getElementById("panelMsg"), btnRestart=document.getElementById("btnRestart"),
+          hint=document.getElementById("hint"), menuPanel=document.getElementById("menuPanel"),
+          btnStart=document.getElementById("btnStart"), countdownEl=document.getElementById("countdown"),
+          countNum=document.getElementById("countNum");
+
+    btnMusic.addEventListener("click",toggleMusic);
+
+    function updateBestScoreDisplay(){
+      bestScoreEl.textContent="Mejor: "+POINTS.best;
+      menuBestEl.textContent="Mejor puntuación: "+POINTS.best;
+    }
+    updateBestScoreDisplay();
+
+    const player={x:140,y:WORLD.h-300,vy:0,r:50,state:"calmado",mareo:0,blinkTimer:rand(3,6)};
+    const sueloScroll=[{x:0},{x:WORLD.w}], obstacles=[], bananas=[], pulses=[], particles=[];
+    const CLOUD={list:[]};
+    function rand(a,b){return a+Math.random()*(b-a);}
+    function dist2(ax,ay,bx,by){const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
+
+    const IMG={fondos:{},erizo:{},obstaculos:[],banana:null,suelo:null,cuenco:null,nubes:[]};
+    function loadImage(s){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=s;});}
+    async function loadAll(){
+      IMG.fondos.calc=await loadImage(ASSETS.fondos.calc);
+      IMG.fondos.desierto=await loadImage(ASSETS.fondos.desierto);
+      IMG.fondos.helado=await loadImage(ASSETS.fondos.helado);
+      currentBg=IMG.fondos.calc;
+      for(let k in ASSETS.erizo) IMG.erizo[k]=await loadImage(ASSETS.erizo[k]);
+      for(let s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s));
+      IMG.banana=await loadImage(ASSETS.banana);
+      IMG.suelo=await loadImage(ASSETS.suelo);
+      IMG.cuenco=await loadImage(ASSETS.cuenco);
+      for(let s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
+    }
+
+    function initClouds(){ CLOUD.list=[]; for(let i=0;i<10;i++){ CLOUD.list.push({x:rand(0,WORLD.w),y:rand(50,WORLD.h/2),w:rand(80,180),h:rand(50,100),speed:20+Math.floor(rand(0,3))*40,img:IMG.nubes[Math.floor(rand(0,IMG.nubes.length))]});}}
+
+    function reset(){ POINTS.total=0; CHARGE.value=0; CHARGE.cooldown=0;
+      SPEED.scroll=280; SPAWN.interval=1.2; SPAWN.timer=0; SPAWN.diffTimer=0;
+      obstacles.length=bananas.length=pulses.length=particles.length=0;
+      player.y=WORLD.h-GROUND_H-player.r+20; player.vy=0; player.state="calmado";
+      panel.classList.remove("show"); hint.style.display="";
+      bgStage=0; currentBg=IMG.fondos.calc; initClouds(); gameOver=false;
+      playMusic(MUSIC.base);
+    }
+
+    function onGameOver(){ gameOver=true;
+      if(POINTS.total>POINTS.best){ POINTS.best=POINTS.total;
+        localStorage.setItem("bestScore",POINTS.best); updateBestScoreDisplay();}
+    }
+
+    function update(dt){
+      if(POINTS.total>=85&&bgStage<2){ setTimeout(()=>playSfx("woosh",0.8),120); currentBg=IMG.fondos.helado; bgStage=2;}
+      else if(POINTS.total>=50&&bgStage<1){ setTimeout(()=>playSfx("woosh",0.7),120); currentBg=IMG.fondos.desierto; bgStage=1;}
+
+      for(let s of sueloScroll){ s.x-=SPEED.scroll*dt; if(s.x<=-WORLD.w) s.x+=WORLD.w*2;}
+      for(const c of CLOUD.list){ c.x-=c.speed*dt; if(c.x+c.w<0){ c.x=WORLD.w+rand(10,100); c.y=rand(50,WORLD.h/2);} }
+
+      if(isDown&&CHARGE.cooldown<=0){ player.state="inhalando"; player.vy+=PHYSICS.inhaleForce*dt;
+        CHARGE.value=Math.min(CHARGE.max,CHARGE.value+CHARGE.rate*dt);
+        if(!wasInhaling){ playSfx("inhalar",0.25); inhaleSfxTimer=0;}}
+      wasInhaling=isDown&&CHARGE.cooldown<=0;
+
+      player.vy+=PHYSICS.gravity*dt;
+      if(player.vy>PHYSICS.maxVy) player.vy=PHYSICS.maxVy;
+      player.y+=player.vy*dt;
+      const sueloTop=WORLD.h-GROUND_H-player.r;
+      if(player.y>sueloTop){player.y=sueloTop;player.vy=0;}
+      if(player.y<140){player.y=140;player.vy=0;}
+
+      if(justReleased){ justReleased=false;
+        if(CHARGE.cooldown<=0){ const t=CHARGE.value/CHARGE.max;
+          const rad=PULSE.base+t*(PULSE.max-PULSE.base);
           pulses.push({x:player.x+40,y:player.y,rad,life:PULSE.life});
-          CHARGE.cooldown=CHARGE.cooldownBase; CHARGE.value=0; player.state="gritando";
-          playSfx("grito",0.85);
-        }
+          CHARGE.cooldown=CHARGE.cooldownBase; CHARGE.value=0;
+          player.state="gritando"; playGrito();
+        } inhaleSfxTimer=0;
       }
-      inhaleSfxTimer=0;
+
+      if(CHARGE.cooldown>0) CHARGE.cooldown=Math.max(0,CHARGE.cooldown-dt);
+      if(!isDown&&CHARGE.cooldown===0) player.state="calmado";
+
+      for(let i=pulses.length-1;i>=0;i--){ const p=pulses[i]; p.life-=dt; if(p.life<=0)pulses.splice(i,1);}
+      for(let i=obstacles.length-1;i>=0;i--){ const o=obstacles[i]; o.x-=SPEED.scroll*dt; if(o.x<-120) obstacles.splice(i,1); }
+      for(let i=bananas.length-1;i>=0;i--){ const b=bananas[i]; b.x-=SPEED.scroll*dt; if(b.x<-120) bananas.splice(i,1); }
+
+      for(let i=obstacles.length-1;i>=0;i--){ const o=obstacles[i];
+        if(dist2(o.x,o.y,player.x,player.y)<=(o.r+player.r)**2){
+          playSfx("chocar",0.35); panel.classList.add("show"); onGameOver(); cancelAnimationFrame(loopId); return;
+      }}
+
+      scoreEl.textContent="Puntos: "+POINTS.total;
+      zenFill.style.width=(CHARGE.value/CHARGE.max)*100+"%";
+      zenFill.parentElement.classList.toggle("cooldown",CHARGE.cooldown>0);
+
+      player.blinkTimer-=dt;
+      if(player.blinkTimer<=0){ player.state="parpadeo"; player.blinkTimer=rand(3,6); }
+      if(player.state==="parpadeo"&&player.blinkTimer<rand(0.1,0.2)) player.state="calmado";
     }
 
-    if(CHARGE.cooldown>0) CHARGE.cooldown=Math.max(0,CHARGE.cooldown-dt);
-    if(!isDown&&CHARGE.cooldown===0&&player.state!=="parpadeo") player.state="calmado";
-
-    // Rebote visual
-    playerScale += scaleVel * dt;
-    scaleVel += (1 - playerScale) * 5 * dt;
-    if(Math.abs(1 - playerScale) < 0.001) playerScale = 1;
-
-    for(let i=pulses.length-1;i>=0;i--){
-      const p=pulses[i]; p.life-=dt;
-      if(p.life<=0){pulses.splice(i,1);continue;}
-      for(let j=obstacles.length-1;j>=0;j--){
-        const o=obstacles[j];
-        if(dist2(p.x,p.y,o.x,o.y)<=(p.rad+o.r)**2){
-          obstacles.splice(j,1); POINTS.total+=2;
-        }
-      }
+    function draw(){
+      ctx.clearRect(0,0,WORLD.w,WORLD.h);
+      if(currentBg) ctx.drawImage(currentBg,0,0,WORLD.w,WORLD.h);
+      if(gameOver) return;
+      for(const c of CLOUD.list) if(c.img) ctx.drawImage(c.img,c.x,c.y,c.w,c.h);
+      for(const p of pulses){ const a=p.life/PULSE.life; ctx.strokeStyle=`rgba(99,102,241,${a})`; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(p.x,p.y,p.rad,0,Math.PI*2); ctx.stroke(); }
+      for(const s of sueloScroll) ctx.drawImage(IMG.suelo,s.x,WORLD.h-GROUND_H,WORLD.w,GROUND_H);
+      const im=IMG.erizo[player.state]||IMG.erizo.calmado;
+      if(im) ctx.drawImage(im,player.x-player.r,player.y-player.r,player.r*2,player.r*2);
     }
 
-    for(let i=obstacles.length-1;i>=0;i--){ const o=obstacles[i]; o.x-=o.speed*dt; if(o.x<-120) obstacles.splice(i,1); }
-    for(let i=bananas.length-1;i>=0;i--){ const b=bananas[i]; b.x-=b.speed*dt; if(b.x<-120) bananas.splice(i,1); }
+    function frame(ts){ const dt=(ts-lastFrame)/1000; lastFrame=ts; update(dt); draw(); loopId=requestAnimationFrame(frame); }
 
-    for(let i=obstacles.length-1;i>=0;i--){
-      const o=obstacles[i];
-      if(dist2(o.x,o.y,player.x,player.y)<=(o.r+player.r)**2){
-        playSfx("chocar",0.3);
-        panelMsg.textContent="El erizo chocó con el destino";
-        panel.classList.add("show");
-        onGameOver(); cancelAnimationFrame(loopId); return;
-      }
+    btnRestart.addEventListener("click",()=>{ reset(); lastFrame=performance.now(); requestAnimationFrame(frame); });
+    function showCountdown(cb){ const imgs=["assets/contador_arbol.png","assets/contador_calcetin.png","assets/contador_leche.png"];
+      const go="assets/contador_go.png"; let seq=[...imgs,go],i=0;
+      countdownEl.classList.add("show");
+      function step(){ if(i<seq.length){ countNum.innerHTML=`<img src="${seq[i]}">`; playSfx("gong",0.7); i++; setTimeout(step,1000);}
+        else{ countdownEl.classList.remove("show"); cb();}} step();
     }
 
-    for(let i=bananas.length-1;i>=0;i--){
-      const b=bananas[i];
-      if(dist2(b.x,b.y,player.x,player.y)<=(b.r+player.r)**2){
-        bananas.splice(i,1);
-        POINTS.total+=b.kind==="cuenco"?5:1;
-        playSfx("recolectar",0.8);
-      }
-    }
-
-    scoreEl.textContent="Puntos: "+POINTS.total;
-    zenFill.style.width=(CHARGE.value/CHARGE.max)*100+"%";
-    zenFill.parentElement.classList.toggle("cooldown",CHARGE.cooldown>0);
-  }
-
-  function draw(){
-    ctx.clearRect(0,0,WORLD.w,WORLD.h);
-    if(currentBg) ctx.drawImage(currentBg,0,0,WORLD.w,WORLD.h);
-    if(gameOver) return;
-
-    for(const c of CLOUD.list) if(c.img) ctx.drawImage(c.img,c.x,c.y,c.w,c.h);
-    for(const b of bananas) ctx.drawImage(b.kind==="cuenco"?IMG.cuenco:IMG.banana,b.x-b.r,b.y-b.r,b.r*2,b.r*2);
-    for(const o of obstacles) ctx.drawImage(IMG.obstaculos[o.kind],o.x-o.r,o.y-o.r,o.r*2,o.r*2);
-    for(const p of pulses){
-      const a=p.life/PULSE.life;
-      ctx.strokeStyle=`rgba(99,102,241,${a})`; ctx.lineWidth=6;
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.rad,0,Math.PI*2); ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,p.rad+2,0,Math.PI*2);
-      ctx.strokeStyle=`rgba(255,255,255,${a*0.5})`; ctx.lineWidth=2; ctx.stroke();
-    }
-
-    for(const s of sueloScroll) ctx.drawImage(IMG.suelo,s.x,WORLD.h-GROUND_H,WORLD.w,GROUND_H);
-    const im=IMG.erizo[player.state]||IMG.erizo.calmado;
-    if(im){
-      const size=player.r*2*playerScale;
-      ctx.drawImage(im,player.x-size/2,player.y-size/2,size,size);
-    }
-  }
-
-  function frame(ts){const dt=(ts-lastFrame)/1000; lastFrame=ts; update(dt); draw(); loopId=requestAnimationFrame(frame);}
-
-  btnRestart.addEventListener("click",()=>{reset(); lastFrame=performance.now(); requestAnimationFrame(frame); playMusic(MUSIC.base);});
-
-  function showCountdown(cb){
-    const imgs=["assets/contador_arbol.png","assets/contador_calcetin.png","assets/contador_leche.png","assets/contador_cuenco.png","assets/contador_antena.png","assets/contador_seta.png","assets/contador_coche.png","assets/contador_lapiz.png","assets/contador_paraguas.png","assets/contador_helado.png"];
-    const go="assets/contador_go.png";
-    let pool=[...imgs],seq=[];
-    for(let i=0;i<3;i++){const idx=Math.floor(Math.random()*pool.length); seq.push(pool.splice(idx,1)[0]);}
-    seq.push(go);
-    let i=0; countdownEl.classList.add("show");
-    function step(){
-      if(i<seq.length){
-        countNum.innerHTML=`<img src="${seq[i]}">`; playSfx("gong",0.7);
-        i++; setTimeout(step,1000);
-      } else { countdownEl.classList.remove("show"); cb(); }
-    }
-    step();
-  }
-
-  loadAll().then(()=>{
-    document.getElementById("loader").style.display="none";
-    btnStart.addEventListener("click",()=>{
-      menuPanel.classList.remove("show");
-      showCountdown(()=>{
-        reset(); lastFrame=performance.now(); playMusic(MUSIC.base); requestAnimationFrame(frame);
+    loadAll().then(()=>{
+      document.getElementById("loader").style.display="none";
+      btnStart.addEventListener("click",()=>{
+        menuPanel.classList.remove("show");
+        showCountdown(()=>{
+          reset(); lastFrame=performance.now();
+          playMusic(MUSIC.base); requestAnimationFrame(frame);
+        });
       });
     });
-  });
 
-  canvas.addEventListener("pointerdown",()=>isDown=true);
-  canvas.addEventListener("pointerup",()=>{isDown=false; justReleased=true;});
-})();
-</script>
+    canvas.addEventListener("pointerdown",()=>isDown=true);
+    canvas.addEventListener("pointerup",()=>{isDown=false; justReleased=true;});
+  })();
+  </script>
 </body>
 </html>
