@@ -5,104 +5,77 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Astuto Erizo - Respira y Grita</title>
   <style>
-    html, body { margin:0; height:100%; background:#0e0e10; color:#fff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+    html,body{
+      margin:0; height:100%; background:#0e0e10; color:#fff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
     #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
     canvas { background:#1b1b1f; touch-action:none; display:block; }
+
+    /* HUD */
     .hud {
       position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
-      width: min(92vw, 900px); pointer-events:none;
+      width: min(92vw, 540px); pointer-events:none;
       display:flex; align-items:center; gap:12px; justify-content:space-between;
       font-weight:600;
     }
-    .bar { flex:1; height:14px; background:#3a3a44; border-radius:999px; overflow:hidden; border:2px solid #6ee7b7; box-shadow:0 0 6px rgba(110,231,183,0.6) inset; }
+    .bar { flex:1; height:14px; background:#3a3a44; border-radius:999px; overflow:hidden;
+      border:2px solid #6ee7b7; box-shadow:0 0 6px rgba(110,231,183,0.6) inset; }
     .fill { height:100%; width:0%; background:#86efac; transition: width .08s linear; }
-    .cooldown { opacity:.45; }
     .score { min-width:100px; text-align:right; pointer-events:auto; }
-    .hud-btn { pointer-events:auto; cursor:pointer; padding:6px 10px; background:#24242a; border-radius:8px; font-size:14px; user-select:none; }
-    .toast {
-      position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
-      background:#24242a; border:1px solid #333; padding:8px 12px; border-radius:10px; font-size:14px; opacity:.95;
-    }
-    .panel {
-      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.45); transition:opacity .22s ease;
-    }
-    .panel.show { display:flex; opacity:1; pointer-events:auto; }
-    .card {
-      background:#1e1e24; border:1px solid #333; border-radius:16px; padding:20px; width:min(92vw, 520px); text-align:center;
-      box-shadow: 0 12px 40px rgba(0,0,0,.45);
-    }
-    .btn {
-      display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d;
-      font-weight:700; cursor:pointer; user-select:none;
-    }
+    .hud-btn { pointer-events:auto; cursor:pointer; padding:6px 8px; background:#24242a; border-radius:6px; font-size:13px; }
 
-    /* Countdown overlay */
-    #countdown {
-      position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
-      background: rgba(0,0,0,.45); backdrop-filter: blur(2px);
-      z-index: 999;
-    }
-    #countdown.show { display:flex; }
-    #countdown #countNum {
-      font-size: clamp(40px, 18vw, 220px);
-      color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6); font-weight:900;
-      display:flex; align-items:center; justify-content:center;
-    }
-    #countdown img {
-      max-width: 60%; height:auto; display:block; margin: 0 auto;
-      animation: zoomIn 0.6s ease;
-    }
-    @keyframes zoomIn { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    /* Panel */
+    .panel { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); transition:opacity .2s ease; }
+    .panel.show { display:flex; opacity:1; pointer-events:auto; }
+    .card { background:#1e1e24; border:1px solid #333; border-radius:16px; padding:20px; width:min(92vw,420px); text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    .btn { display:inline-block; margin-top:12px; padding:10px 16px; border-radius:12px; background:#6ee7b7; color:#0b0b0d; font-weight:700; cursor:pointer; user-select:none; }
 
     /* Loader */
     #loader {
-      position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:#0e0e10; z-index:2000;
+      position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0e0e10; z-index:2000;
     }
-    #loader img { max-width: 220px; animation: float 1.8s ease-in-out infinite; display:block; }
-    #loader p { margin-top: 12px; font-size: 18px; color: #6ee7b7; font-weight: 700; animation: blink 1.2s infinite; }
-    @keyframes float { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-16px);} }
-    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+    #loader img { max-width: 200px; animation: float 1.8s ease-in-out infinite; }
+    #loader p { margin-top:12px; font-size:18px; color:#6ee7b7; font-weight:bold; animation: blink 1.2s infinite; }
+    @keyframes float { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-18px);} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-    /* Boss intro card inside canvas overlay */
-    .boss-intro {
-      position: absolute; left:50%; top:12%; transform: translateX(-50%); z-index:1500; pointer-events:none;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .boss-intro img { max-width: min(320px, 70vw); display:block; }
+    /* Boss counter top-left */
+    #bossCounter { position:fixed; top:12px; left:12px; z-index:900; display:none; background:rgba(0,0,0,0.25); padding:6px; border-radius:8px; }
+    #bossCounter img { width:56px; height:auto; display:block; }
 
-    /* Small screen fixes */
-    @media (max-width:420px) {
-      .card { width:92vw; }
-      .hud { gap:6px; font-size:13px; }
-      .hud-btn { padding:6px; font-size:13px; }
-    }
+    /* Shake */
+    .shake { animation: shake 0.4s; }
+    @keyframes shake { 0%,100%{ transform:none } 25%{ transform:translate(-6px,6px) } 50%{ transform:translate(6px,-6px) } 75%{ transform:translate(-4px,-4px) } }
 
+    /* Small highlight flash */
+    #flash { position:fixed; inset:0; background:rgba(255,255,255,0.06); pointer-events:none; opacity:0; transition: opacity .18s ease; }
   </style>
 </head>
 <body>
   <!-- Loader -->
-  <div id="loader" aria-hidden="true">
-    <img id="loaderImg" src="assets/loader.png" alt="Cargando...">
+  <div id="loader">
+    <img id="loaderImg" src="assets/loader.png" alt="Cargando">
     <p>Loading...</p>
   </div>
 
-  <!-- Canvas wrapper -->
+  <!-- Canvas -->
   <div id="wrap"><canvas id="game" width="540" height="960"></canvas></div>
 
   <!-- HUD -->
   <div class="hud">
-    <div class="bar" style="pointer-events:none;"><div class="fill" id="zenFill"></div></div>
+    <div class="bar"><div class="fill" id="zenFill"></div></div>
     <div class="score" id="score">Puntos: 0</div>
     <div class="score" id="bestScore">Mejor: 0</div>
     <div class="hud-btn" id="btnMusic">🔊</div>
   </div>
 
-  <!-- Hint toast -->
-  <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div>
+  <!-- Flash -->
+  <div id="flash"></div>
 
-  <!-- Game over panel -->
+  <!-- Panels -->
   <div class="panel" id="panel">
     <div class="card">
       <h2>Astuto Erizo</h2>
@@ -112,1074 +85,697 @@
     </div>
   </div>
 
-  <!-- Menu start -->
   <div class="panel show" id="menuPanel">
     <div class="card">
-      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width: 280px; margin-bottom: 12px;">
+      <img src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width:260px;margin-bottom:12px;">
       <h2>Respira y Grita</h2>
-      <p id="menuBest" style="margin-bottom:6px; opacity:.9;">Mejor puntuación: 0</p>
-      <p style="opacity:.82;">Cuando estés listo, pulsa jugar y respira profundo…</p>
+      <p id="menuBest">Mejor puntuación: 0</p>
+      <p>Cuando estés listo, pulsa jugar y respira profundo…</p>
       <div class="btn" id="btnStart">Jugar</div>
       <p style="opacity:.7; font-size:12px; margin-top:10px;">Mantén pulsado para inhalar · Suelta para gritar</p>
     </div>
   </div>
 
-  <!-- Countdown overlay -->
-  <div id="countdown"><div id="countNum"></div></div>
+  <!-- Boss counter (top-left) -->
+  <div id="bossCounter"><img src="" alt="count"></div>
 
-  <!-- Boss intro image container (drawn outside canvas) -->
-  <div class="boss-intro" id="bossIntroContainer" style="display:none;"></div>
+  <script>
+  (async () => {
+    // --------------- CONFIG / ESTADO ---------------
+    const TEST_MODE = true; // true para pruebas rápidas (boss a 5, bonus a 20). Pon false para valores reales.
+    const WORLD = { w:540, h:960 };
+    const SPEED = { scroll:280, inc:20, max:520 };
+    const SPAWN    = { interval:1.2, min:0.7, timer:0, diffTimer:0 };
+    const CHARGE   = { value:0, rate:60, max:100, over:85, cooldown:0, cooldownBase:1.0 };
+    const PULSE    = { base:120, max:380, life:0.25 };
+    const POINTS   = { total:0, best: parseInt(localStorage.getItem('bestScore')||'0',10) };
+    const PHYSICS  = { gravity:600, inhaleForce:-1400, maxVy:500 }; // inhaleForce changed for snappier lift
+    const GROUND_H = 180;
 
-<script>
-(() => {
-  // ----------------- CONFIG / STATE -----------------
-  const TEST_MODE = true; // si true, thresholds bajos para pruebas
-  const BOSS_THRESHOLD = TEST_MODE ? 5 : 50;    // puntos para activar boss
-  const BONUS_THRESHOLD = TEST_MODE ? 20 : 75;  // puntos para bonus stage (no implementado plenamente ahora)
-  const BOSS_DURATION = 10; // segundos de fase activa del boss
-  const WORLD = { w: 540, h: 960 };
-  const SPEED = { scroll: 280, inc: 20, max: 520 };
-  const SPAWN = { interval: 1.2, min: 0.7, timer: 0, diffTimer: 0 };
-  const CHARGE = { value:0, rate:85, max:100, over:85, cooldown:0, cooldownBase:1.0 }; // rate aumentado para respuesta más rápida
-  const PULSE  = { base:120, max:380, life:0.25 };
-  const POINTS = { total:0, best: parseInt(localStorage.getItem("bestScore")||"0",10) || 0 };
-  const PHYSICS = { gravity: 700, inhaleForce: -1400, maxVy: 600 }; // inhaleForce aumentado para respuesta más rápida
-  const GROUND_H = 180;
+    // DOM + CANVAS
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const loader = document.getElementById('loader');
+    const loaderImg = document.getElementById('loaderImg');
+    const zenFill = document.getElementById('zenFill');
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('bestScore');
+    const menuBest = document.getElementById('menuBest');
+    const panel = document.getElementById('panel');
+    const panelMsg = document.getElementById('panelMsg');
+    const btnRestart = document.getElementById('btnRestart');
+    const menuPanel = document.getElementById('menuPanel');
+    const btnStart = document.getElementById('btnStart');
+    const btnMusic = document.getElementById('btnMusic');
+    const hint = document.getElementById('hint');
+    const bossCounter = document.getElementById('bossCounter');
+    const flash = document.getElementById('flash');
 
-  let gameState = "menu"; // values: "menu","normal","bossIntro","bossActive","bossOutro","gameOver"
-  let bgStage = 0;
-  let currentBg = null;
-  let allowSfx = true;
-  let returnToBoss = false; // si el jugador muere en boss, reiniciar EN boss
-  let bossTimerLeft = 0;
+    // scale-to-fit
+    function fit() {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const s = Math.min(vw / WORLD.w, vh / WORLD.h);
+      canvas.style.width = WORLD.w * s + 'px';
+      canvas.style.height = WORLD.h * s + 'px';
+    }
+    window.addEventListener('resize', fit);
+    fit();
 
-  // -------- DOM & Canvas references -----------
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const zenFill = document.getElementById('zenFill');
-  const scoreEl = document.getElementById('score');
-  const bestScoreEl = document.getElementById('bestScore');
-  const menuBestEl = document.getElementById('menuBest');
-  const panel = document.getElementById('panel');
-  const panelMsg = document.getElementById('panelMsg');
-  const btnRestart = document.getElementById('btnRestart');
-  const hint = document.getElementById('hint');
-  const loader = document.getElementById('loader');
-  const loaderImg = document.getElementById('loaderImg');
-  const menuPanel = document.getElementById('menuPanel');
-  const btnStart = document.getElementById('btnStart');
-  const countdownEl = document.getElementById('countdown');
-  const countNum = document.getElementById('countNum');
-  const bossIntroContainer = document.getElementById('bossIntroContainer');
-  const btnMusic = document.getElementById('btnMusic');
-
-  // -------- INPUT state ----------
-  let isDown = false, justReleased = false, wasInhaling = false, inhaleSfxTimer = 0;
-  function withinCanvas(clientX, clientY){
-    const rect = canvas.getBoundingClientRect();
-    const x = (clientX - rect.left) * (canvas.width / rect.width);
-    const y = (clientY - rect.top) * (canvas.height / rect.height);
-    return (x >= 0 && x <= canvas.width && y >= 0 && y <= canvas.height);
-  }
-
-  // -------- Entities & helpers ----------
-  const player = { x: 140, y: WORLD.h - 300, r: 44, state: 'calmado', vy: 0, mareo: 0 };
-  const sueloScroll = [ { x: 0 }, { x: WORLD.w } ];
-  const obstacles = [], bananas = [], pulses = [], particles = [];
-  const CLOUD = { list: [] };
-
-  const rand = (a,b) => a + Math.random()*(b-a);
-  const chance = (p) => Math.random() < p;
-  function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
-
-  // -------- Assets list ----------
-  const ASSETS = {
-    fondos: {
-      calc: "assets/fondo_calc.png",
-      desierto: "assets/fondo_desierto.png",
-      helado: "assets/fondo_helado.png"
-    },
-    erizo: {
-      calmado:   "assets/calmado.png",
-      inhalando: "assets/respirando.png",
-      gritando:  "assets/gritando.png",
-      parpadeo:  "assets/erizo_parpadeo.png" // nuevo recurso que subiste
-    },
-    obstaculos: [
-      "assets/paraguas.png",
-      "assets/helado_meditando.png"
-    ],
-    banana: "assets/platano_puntos.png",
-    suelo: "assets/suelo.png",
-    cuenco: "assets/cuenco_tibetano.png",
-    nubes: [
-      "assets/nubes/nube1.png",
-      "assets/nubes/nube2.png",
-      "assets/nubes/nube3.png",
-      "assets/nubes/nube4.png"
-    ],
-    contador: [
-      "assets/contador_arbol.png","assets/contador_calcetin.png","assets/contador_leche.png",
-      "assets/contador_cuenco.png","assets/contador_antena.png","assets/contador_seta.png",
-      "assets/contador_coche.png","assets/contador_lapiz.png","assets/contador_paraguas.png",
-      "assets/contador_helado.png"
-    ],
-    contadorGo: "assets/contador_go.png",
-    loaders: [
-      "assets/loader.png","assets/loader1.png","assets/loader2.png","assets/loader3.png"
-    ],
-    // boss assets (user said they uploaded)
-    boss: {
-      image: "assets/pasta_feroz.png",
-      cartel: "assets/boss/cuidado_espuma.png",
-      countDir: "assets/boss/", // expects 1.png .. 10.png inside
-      espumas: [
-        "assets/espuma_boss.png",
-        "assets/espuma_boss1.png",
-        "assets/espuma_boss2.png",
-        "assets/espuma_boss3.png"
-      ],
-      music: "assets/musica_boss.mp3"
-    },
-    // music
-    music: {
-      base: "assets/musica_base.mp3",
-      bonus: "assets/musica_bonus.mp3",
-      boss: "assets/musica_boss.mp3"
-    },
-    sfx: {
+    // --------------- AUDIO ---------------
+    // SFX map (must be present in assets)
+    const SFX_SOURCES = {
       grito: "assets/sonido_bowl_limpio.mp3",
       recolectar: "assets/sonido_recolectar_platano.mp3",
       inhalar: "assets/sonido_inhalar.mp3",
       chocar: "assets/sonido_chocar.mp3",
       woosh: "assets/woosh.mp3",
       gong: "assets/gong.mp3"
+    };
+    let allowSfx = true; // set to false when gameOver to avoid more SFX
+    function playSfx(name, volume=1) {
+      if (!allowSfx) return;
+      const src = SFX_SOURCES[name];
+      if (!src) return;
+      const a = new Audio(src);
+      a.volume = volume;
+      a.play().catch(()=>{});
     }
-  };
 
-  // --------- Preloaded image objects ----------
-  const IMG = {
-    fondos: {},
-    erizo: {},
-    obstaculos: [],
-    banana: null,
-    suelo: null,
-    cuenco: null,
-    nubes: [],
-    contador: [],
-    contadorGo: null,
-    boss: { image: null, cartel: null, espumas: [], countdown: [] },
-    loaders: []
-  };
+    // MUSIC (Audio elements so we can loop & pause)
+    const MUSIC = {
+      base: new Audio('assets/musica_base.mp3'),
+      boss: new Audio('assets/musica_boss.mp3'),
+      bonus: new Audio('assets/musica_bonus.mp3')
+    };
+    for (let k in MUSIC) { MUSIC[k].loop = true; MUSIC[k].volume = 0.45; }
+    let currentMusic = MUSIC.base;
+    let musicEnabled = true;
+    function playMusic(track) {
+      if (!musicEnabled) return;
+      if (currentMusic && !currentMusic.paused) currentMusic.pause();
+      currentMusic = track;
+      currentMusic.currentTime = 0;
+      currentMusic.play().catch(()=>{});
+    }
+    function stopMusic() { if (currentMusic) { currentMusic.pause(); currentMusic.currentTime = 0; } }
 
-  function loadImage(src){
-    return new Promise(res => {
-      if (!src) return res(null);
-      const im = new Image();
-      im.onload = () => res(im);
-      im.onerror = () => { console.warn("No se pudo cargar:", src); res(null); };
-      // no cache-bust to rely on GitHub Pages caching; during dev you can add ?v=...
-      im.src = src;
+    btnMusic.addEventListener('click', () => {
+      musicEnabled = !musicEnabled;
+      if (musicEnabled) { btnMusic.textContent = '🔊'; playMusic(currentMusic || MUSIC.base); }
+      else { btnMusic.textContent = '🔇'; stopMusic(); }
     });
-  }
 
-  // --------- Audio setup ----------
-  // We'll use HTMLAudio for easier cross-browser compatibility, plus simple fade logic
-  const MUSIC = {
-    base: new Audio(ASSETS.music.base),
-    bonus: new Audio(ASSETS.music.bonus),
-    boss: new Audio(ASSETS.music.boss)
-  };
-  for (let k in MUSIC) {
-    try { MUSIC[k].loop = true; MUSIC[k].volume = 0.45; } catch(e) {}
-  }
-  let musicEnabled = true;
-  let currentMusic = MUSIC.base;
+    // --------------- ASSETS (paths) ---------------
+    const ASSETS = {
+      fondos: {
+        calc: "assets/fondo_calc.png",
+        desierto: "assets/fondo_desierto.png",
+        helado: "assets/fondo_helado.png"
+      },
+      erizo: {
+        calmado: "assets/calmado.png",
+        inhalando: "assets/respirando.png",
+        gritando: "assets/gritando.png",
+        parpadeo: "assets/erizo_parpadeo.png" // optional extra sprite user uploaded
+      },
+      obstaculos: [
+        "assets/paraguas.png",
+        "assets/helado_meditando.png"
+      ],
+      banana: "assets/platano_puntos.png",
+      cuenco: "assets/cuenco_tibetano.png",
+      suelo: "assets/suelo.png",
+      nubes: [
+        "assets/nubes/nube1.png",
+        "assets/nubes/nube2.png",
+        "assets/nubes/nube3.png",
+        "assets/nubes/nube4.png"
+      ],
+      // boss assets (in assets/boss/)
+      boss: {
+        pasta: "assets/boss/pasta_feroz.png",
+        espumas: [
+          "assets/boss/espuma_boss.png",
+          "assets/boss/espuma_boss1.png",
+          "assets/boss/espuma_boss2.png",
+          "assets/boss/espuma_boss3.png"
+        ],
+        cartel: "assets/boss/cuidado_espuma.png",
+        numerosDir: "assets/boss/" // numbered images 1.png..10.png
+      },
+      // bonus collectible sprites
+      bonus: [
+        "assets/boss/patito1.png",
+        "assets/boss/patito2.png"
+      ],
+      // loaders options
+      loaders: [
+        "assets/loader.png",
+        "assets/loader1.png",
+        "assets/loader2.png",
+        "assets/loader3.png"
+      ]
+    };
 
-  const SFX = {}; // we will create functions to play sfx controlled by allowSfx
-  // simple playSfx wrapper:
-  function playSfx(name, volume = 1.0) {
-    if (!allowSfx) return;
-    const src = ASSETS.sfx[name];
-    if (!src) return;
-    const a = new Audio(src);
-    a.volume = volume;
-    a.play().catch(()=>{ /* ignore play errors until user interacts */ });
-  }
+    // --------------- IMAGES PRELOAD ---------------
+    const IMG = {
+      fondos: {},
+      erizo: {},
+      obstaculos: [],
+      banana: null,
+      cuenco: null,
+      suelo: null,
+      nubes: [],
+      boss: { pasta: null, espumas: [], cartel: null },
+      numeros: [], // 1..10
+      bonus: []
+    };
 
-  // fade helpers for music: direction "in" or "out"
-  function fadeMusic(audioEl, toVolume, duration=300) {
-    if (!audioEl) return;
-    const start = audioEl.volume;
-    const diff = toVolume - start;
-    const startTime = performance.now();
-    audioEl.play().catch(()=>{});
-    function step(ts) {
-      const t = Math.min(1, (ts - startTime) / duration);
-      audioEl.volume = start + diff * t;
-      if (t < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-
-  function stopAllSfx() {
-    allowSfx = false;
-    // Allow future sfx if re-enabled
-    setTimeout(() => allowSfx = true, 50);
-  }
-
-  // --------- Load all assets ----------
-  async function loadAll() {
-    // fondos
-    IMG.fondos.calc = await loadImage(ASSETS.fondos.calc);
-    IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto);
-    IMG.fondos.helado = await loadImage(ASSETS.fondos.helado);
-    currentBg = IMG.fondos.calc;
-
-    // erizo
-    IMG.erizo.calmado = await loadImage(ASSETS.erizo.calmado);
-    IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
-    IMG.erizo.gritando = await loadImage(ASSETS.erizo.gritando);
-    IMG.erizo.parpadeo = await loadImage(ASSETS.erizo.parpadeo);
-
-    // obstaculos
-    for (let s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s));
-
-    // coleccionables
-    IMG.banana = await loadImage(ASSETS.banana);
-    IMG.suelo = await loadImage(ASSETS.suelo);
-    IMG.cuenco = await loadImage(ASSETS.cuenco);
-
-    // nubes
-    for (let s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
-
-    // contador images
-    for (let s of ASSETS.contador) IMG.contador.push(await loadImage(s));
-    IMG.contadorGo = await loadImage(ASSETS.contadorGo);
-
-    // loaders
-    for (let s of ASSETS.loaders) IMG.loaders.push(await loadImage(s));
-
-    // boss assets
-    IMG.boss.image = await loadImage(ASSETS.boss.image);
-    IMG.boss.cartel = await loadImage(ASSETS.boss.cartel);
-    for (let p of ASSETS.boss.espumas) IMG.boss.espumas.push(await loadImage(p));
-
-    // boss countdown numbers 1..10 from folder if exist (optional)
-    for (let i = 1; i <= 10; i++) {
-      const path = ASSETS.boss.countDir + i + ".png";
-      IMG.boss.countdown.push(await loadImage(path));
+    function loadImage(src) {
+      return new Promise(res => {
+        if (!src) { res(null); return; }
+        const im = new Image();
+        im.onload = () => res(im);
+        im.onerror = () => { console.warn("Img load fail:", src); res(null); };
+        im.src = src;
+      });
     }
 
-    // random loader image now:
-    try {
-      const idx = Math.floor(Math.random() * IMG.loaders.length);
-      if (IMG.loaders[idx]) loaderImg.src = IMG.loaders[idx].src;
-    } catch(e) {}
+    async function loadAll() {
+      // backgrounds
+      IMG.fondos.calc = await loadImage(ASSETS.fondos.calc);
+      IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto);
+      IMG.fondos.helado = await loadImage(ASSETS.fondos.helado);
+      // erizo
+      IMG.erizo.calmado = await loadImage(ASSETS.erizo.calmado);
+      IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando);
+      IMG.erizo.gritando = await loadImage(ASSETS.erizo.gritando);
+      IMG.erizo.parpadeo = await loadImage(ASSETS.erizo.parpadeo);
+      // obstacles
+      for (let s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s));
+      IMG.banana = await loadImage(ASSETS.banana);
+      IMG.cuenco = await loadImage(ASSETS.cuenco);
+      IMG.suelo = await loadImage(ASSETS.suelo);
+      for (let s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
+      // boss
+      IMG.boss.pasta = await loadImage(ASSETS.boss.pasta);
+      IMG.boss.cartel = await loadImage(ASSETS.boss.cartel);
+      for (let e of ASSETS.boss.espumas) IMG.boss.espumas.push(await loadImage(e));
+      // numeros 1..10
+      for (let i=1;i<=10;i++){
+        const nimg = await loadImage(`${ASSETS.boss.numerosDir}${i}.png`);
+        IMG.numeros.push(nimg);
+      }
+      // bonus
+      for (let b of ASSETS.bonus) IMG.bonus.push(await loadImage(b));
 
-    // small delay so loader is visible
-    await new Promise(res => setTimeout(res, 750));
-  }
-
-  // ---------------- Fit canvas ----------------
-  let scale = 1, offsetX = 0, offsetY = 0;
-  function fit() {
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const s = Math.min(vw / WORLD.w, vh / WORLD.h);
-    scale = s;
-    offsetX = (vw - WORLD.w * s) / 2;
-    offsetY = (vh - WORLD.h * s) / 2;
-    canvas.style.width = WORLD.w * s + 'px';
-    canvas.style.height = WORLD.h * s + 'px';
-  }
-  window.addEventListener('resize', fit);
-  fit();
-
-  // --------------- Clouds ----------------
-  function initClouds() {
-    CLOUD.list = [];
-    for (let i = 0; i < 10; i++) {
-      const band = Math.floor(rand(0,3));
-      const img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
-      CLOUD.list.push({ x: rand(0, WORLD.w), y: rand(50, WORLD.h/2), w: rand(80, 180), h: rand(50, 100), speed: 20 + band*40, band, img });
+      // set initial bg
+      currentBg = IMG.fondos.calc;
     }
-  }
 
-  // --------------- Spawn helpers ----------------
-  function spawnObstacle() {
-    const y = rand(240, WORLD.h - 180);
-    const r = rand(44, 70);
-    const speed = Math.min(SPEED.scroll + rand(0,60), SPEED.max);
-    obstacles.push({ x: WORLD.w + 60, y, r, speed, kind: Math.floor(rand(0, IMG.obstaculos.length)) });
+    // --------------- ENTITIES / STATE ---------------
+    const player = { x:140, y:WORLD.h-300, r:48, vy:0, state:'calmado', mareo:0 };
+    const sueloScroll = [{x:0},{x:WORLD.w}];
+    const obstacles = [], bananas = [], pulses = [], particles = [];
+    const CLOUD = { list: [] };
 
-    if (chance(0.30)) {
-      bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h-200), r: 44, speed: speed+40, kind: 'banana' });
-    }
-    if (chance(0.10)) {
-      bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h-200), r: 44, speed: speed+20, kind: 'cuenco' });
-    }
-  }
-
-  // --------------- Reset / Game start ----------------
-  function resetForNormal() {
-    POINTS.total = 0;
-    CHARGE.value = 0;
-    CHARGE.cooldown = 0;
-    SPEED.scroll = 280;
-    SPAWN.interval = 1.2;
-    SPAWN.timer = 0;
-    SPAWN.diffTimer = 0;
-    obstacles.length = 0;
-    bananas.length = 0;
-    pulses.length = 0;
-    particles.length = 0;
-    player.y = WORLD.h - GROUND_H - player.r + 20;
-    player.vy = 0;
-    player.state = 'calmado';
-    player.mareo = 0;
-    panel.classList.remove('show');
-    hint.style.display = '';
-    bgStage = 0;
-    currentBg = IMG.fondos.calc;
-    initClouds();
-    gameState = 'normal';
-    allowSfx = true;
-  }
-
-  function resetToBossIntro() {
-    // prepare boss entry: keep points at threshold or higher so we re-enter boss
-    // remove obstacles/banana etc.
-    obstacles.length = 0;
-    bananas.length = 0;
-    pulses.length = 0;
-    particles.length = 0;
-    SPEED.scroll = 280;
-    SPAWN.interval = 9999;
-    initClouds();
-    gameState = 'bossIntro';
-  }
-
-  // --------------- Game Over handling ----------------
-  function onGameOver() {
-    gameState = 'gameOver';
-    allowSfx = false;
-    panelMsg.textContent = CRASH_MESSAGES[Math.floor(Math.random()*CRASH_MESSAGES.length)];
-    panel.classList.add('show');
-    // update best
-    if (POINTS.total > POINTS.best) {
-      POINTS.best = POINTS.total;
-      localStorage.setItem("bestScore", String(POINTS.best));
-      updateBestDisplay();
-    }
-    // stop music
-    if (currentMusic && !currentMusic.paused) {
-      try { currentMusic.pause(); } catch(e) {}
-    }
-  }
-
-  btnRestart.addEventListener('click', () => {
-    panel.classList.remove('show');
-    hint.style.display = '';
-    // if died during bossActive, preserve boss re-entry
-    if (returnToBoss) {
-      // set points to >= threshold and go to bossIntro
-      POINTS.total = Math.max(POINTS.total, BOSS_THRESHOLD);
-      resetToBossIntro();
-      startBossSequence();
-    } else {
-      resetForNormal();
-      // resume music base
-      playMusic(MUSIC.base);
-      lastFrame = performance.now();
-      requestAnimationFrame(frame);
-    }
-  });
-
-  // --------------- Update & Draw ----------------
-  const CRASH_MESSAGES = [
-    "El erizo se quedó sin aire… como tus plantas en agosto.",
-    "Has gritado al vacío. El vacío gritó de vuelta.",
-    "Chocaste contra la iluminación… pero era un helado.",
-    "Tu zen se fue por el paraguas roto.",
-    "El universo respondió con un plátano invisible.",
-    "Erizo y obstáculo se fundieron en un abrazo incómodo.",
-    "La serenidad se tropezó contigo.",
-    "Has visto la luz... y duele.",
-    "Un pato de goma presenció tu derrota."
-  ];
-
-  function update(dt) {
-    // handle boss triggers only in normal
-    if (gameState === 'normal') {
-      if (POINTS.total >= BOSS_THRESHOLD && bgStage < 1) {
-        // prepare boss: do not instantly switch, go bossIntro sequence
-        bgStage = 1; // mark so not repeated
-        // Start intro sequence
-        resetToBossIntro();
-        startBossSequence();
-        return; // skip remainder this frame
-      } else if (POINTS.total >= BONUS_THRESHOLD && bgStage < 2) {
-        // bonus (not fully implemented) - change bg
-        currentBg = IMG.fondos.helado;
-        bgStage = 2;
-        // swoosh
-        playSfx('woosh', 0.7);
+    let scale = 1, offsetX = 0, offsetY = 0;
+    function initClouds() {
+      CLOUD.list = [];
+      for (let i=0;i<10;i++){
+        const band = Math.floor(Math.random()*3);
+        CLOUD.list.push({
+          x: Math.random()*WORLD.w,
+          y: 50 + Math.random()*(WORLD.h/2 - 50),
+          w: 80 + Math.random()*100,
+          h: 40 + Math.random()*60,
+          speed: 20 + band*40,
+          band,
+          img: IMG.nubes.length ? IMG.nubes[Math.floor(Math.random()*IMG.nubes.length)] : null
+        });
       }
     }
 
-    // if gameOver, skip updates
-    if (gameState === 'gameOver' || gameState === 'menu') {
-      // keep clouds static if gameOver? We choose to not update moving entities
-      return;
-    }
+    // --------------- UTILS ---------------
+    const rand = (a,b) => a + Math.random()*(b-a);
+    const chance = p => Math.random() < p;
+    function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx + dy*dy; }
 
-    // Background progress (if changed previously)
-    // move suelo
-    for (let s of sueloScroll) {
-      s.x -= SPEED.scroll * dt;
-      if (s.x <= -WORLD.w) s.x += WORLD.w * 2;
-    }
+    // --------------- GAME FLOW ---------------
+    let lastFrame = performance.now();
+    let loopId = null;
+    let started = false;
+    let gameOver = false;
+    let allowInput = true;
+    let bossActive = false, bossTimer = 0, bossSpawned = false;
+    let bonusActive = false, bonusTimer = 0;
+    let bossObject = null;
 
-    // clouds movement only if not bossIntro (we keep them static during bossIntro to focus attention)
-    if (gameState !== 'bossIntro') {
-      for (const c of CLOUD.list) {
-        c.x -= c.speed * dt;
-        if (c.x + c.w < 0) {
-          c.x = WORLD.w + rand(10,100);
-          c.y = rand(50, WORLD.h/2);
-          c.w = rand(80, 180);
-          c.h = rand(50, 100);
-          c.img = IMG.nubes.length ? IMG.nubes[Math.floor(rand(0, IMG.nubes.length))] : null;
-        }
-      }
-    }
+    // boss/bonus thresholds (use test mode values for dev)
+    const BOSS_THRESHOLD = TEST_MODE ? 5 : 50;
+    const BONUS_THRESHOLD = TEST_MODE ? 20 : 75;
 
-    // Spawner & difficulty (only in normal and bossOutro/out of boss)
-    if (gameState === 'normal') {
-      SPAWN.timer += dt;
-      SPAWN.diffTimer += dt;
-      if (SPAWN.timer >= SPAWN.interval) {
-        SPAWN.timer = 0;
-        spawnObstacle();
-      }
-      if (SPAWN.diffTimer >= 10) {
-        SPAWN.diffTimer = 0;
-        SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max);
-        SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05);
-      }
-    }
-
-    // Input + physics (only in normal and bossActive; during bossIntro we don't process player input vertically? We'll allow movement during bossActive)
-    if (isDown && CHARGE.cooldown <= 0 && (gameState === 'normal' || gameState === 'bossActive')) {
-      // faster response: if player was on ground recently, apply stronger lift
-      player.state = 'inhalando';
-      // reduce downward inertia
-      if (player.vy > 220) player.vy *= 0.5;
-      const boost = (player.vy > 0 ? 1.6 : 1.2);
-      player.vy += PHYSICS.inhaleForce * boost * dt;
-      CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
-
-      if (!wasInhaling) {
-        playSfx("inhalar", 0.32);
-        inhaleSfxTimer = 0;
-      } else {
-        inhaleSfxTimer += dt;
-        if (inhaleSfxTimer >= 0.5) {
-          playSfx("inhalar", 0.32);
-          inhaleSfxTimer = 0;
-        }
-      }
-    }
-    wasInhaling = isDown && CHARGE.cooldown <= 0;
-
-    // gravity & motion
-    player.vy += PHYSICS.gravity * dt;
-    if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
-    player.y += player.vy * dt;
-
-    // limit maximum height to avoid leaving screen
-    const minY = 80;
-    if (player.y < minY) {
-      player.y = minY;
-      player.vy = Math.min(player.vy, 0); // avoid sticking upward
-    }
-
-    // ground collision
-    const sueloTop = WORLD.h - GROUND_H - player.r;
-    if (player.y > sueloTop) {
-      // if hit with high velocity -> mareo (but gameOver triggers on obstacle)
-      player.y = sueloTop;
+    function resetGameState() {
+      POINTS.total = 0;
+      CHARGE.value = 0; CHARGE.cooldown = 0;
+      SPAWN.interval = 1.2; SPAWN.timer = 0; SPAWN.diffTimer = 0;
+      SPEED.scroll = 280;
+      obstacles.length = bananas.length = pulses.length = particles.length = 0;
+      player.y = WORLD.h - GROUND_H - player.r + 20;
       player.vy = 0;
+      player.state = 'calmado';
+      player.mareo = 0;
+      panel.classList.remove('show');
+      allowInput = true;
+      gameOver = false;
+      bossActive = false; bossTimer = 0; bossSpawned = false; bossObject = null;
+      bonusActive = false; bonusTimer = 0;
+      currentBg = IMG.fondos.calc;
+      initClouds();
+      allowSfx = true;
     }
 
-    // release -> pulse / shout
-    if (justReleased) {
-      justReleased = false;
-      if (CHARGE.cooldown <= 0) {
-        if (CHARGE.value >= CHARGE.over) {
-          CHARGE.cooldown = 0.7;
-          CHARGE.value = 0;
-          player.state = 'gritando';
-          // heavy shout effect (reduced volume)
-          playSfx('grito', 0.35);
-          // create a visible large pulse to damage obstacles
-          const rad = PULSE.base + (PULSE.max - PULSE.base) * 0.9;
-          pulses.push({ x: player.x + 40, y: player.y, rad, life: PULSE.life });
+    // --------------- SPAWNERS ---------------
+    function spawnObstacle() {
+      const y = rand(240, WORLD.h - 180);
+      const r = rand(38,70);
+      const speed = Math.min(SPEED.scroll + rand(0,60), SPEED.max);
+      obstacles.push({ x: WORLD.w + 60, y, r, speed, kind: Math.floor(rand(0, IMG.obstaculos.length)), img: IMG.obstaculos[Math.floor(rand(0,IMG.obstaculos.length))] });
+      if (chance(0.3)) bananas.push({ x: WORLD.w + 100, y: rand(220, WORLD.h - 200), r: 36, speed: speed + 40, kind: 'banana', value:1, img: IMG.banana });
+      if (chance(0.1)) bananas.push({ x: WORLD.w + 150, y: rand(220, WORLD.h - 200), r: 36, speed: speed + 20, kind: 'cuenco', value:5, img: IMG.cuenco });
+    }
+
+    // bonus spawns are handled in startBonus loop
+
+    // --------------- BOSS ---------------
+    function beginBossPhase(){
+      bossActive = true;
+      bossSpawned = false;
+      // change background to desert for boss
+      currentBg = IMG.fondos.desierto;
+      playSfx('woosh', 0.7);
+      // brief pause + show cartel on main canvas -> we'll show cartel in draw-phase until boss spawns
+      bossTimer = 3.0; // 3s to show cartel then spawn boss and start countdown
+      bossSpawned = false;
+      // switch music
+      playMusic(MUSIC.boss);
+    }
+
+    function spawnBoss(){
+      bossObject = {
+        x: WORLD.w - 240,
+        y: Math.max(60, (WORLD.h/2) - 120),
+        w: 220,
+        h: 220,
+        img: IMG.boss.pasta
+      };
+      bossTimer = 10.0; // boss active time
+      bossSpawned = true;
+      // start boss counter UI
+      startBossCounter(bossTimer);
+    }
+
+    function bossFire() {
+      // boss launches foam projectiles from its left side (random vertical positions)
+      const img = IMG.boss.espumas[Math.floor(Math.random()*IMG.boss.espumas.length)];
+      const y = bossObject.y + 30 + Math.random()*(bossObject.h - 60);
+      obstacles.push({ x: bossObject.x - 20, y, r:36, speed: 320 + Math.random()*60, img, kind:'foam' });
+    }
+
+    // --------------- BOSS COUNTER UI ---------------
+    let bossCounterInterval = null;
+    function startBossCounter(duration) {
+      bossCounter.style.display = 'block';
+      const total = Math.ceil(duration);
+      let idx = 0;
+      function step(){
+        if (!bossActive || !bossSpawned) { bossCounter.style.display = 'none'; return; }
+        if (idx < IMG.numeros.length && IMG.numeros[idx]) {
+          bossCounter.firstElementChild.src = IMG.numeros[idx].src;
         } else {
+          // fallback to number text (shouldn't happen if images loaded)
+          bossCounter.firstElementChild.removeAttribute('src');
+        }
+        idx++;
+        if (idx >= total) {
+          setTimeout(()=>{ bossCounter.style.display='none'; }, 900);
+        } else {
+          setTimeout(step, 1000);
+        }
+      }
+      step();
+    }
+
+    // --------------- BONUS ---------------
+    function beginBonusPhase(){
+      bonusActive = true;
+      bonusTimer = 10.0; // how long the bonus stage lasts
+      currentBg = IMG.fondos.helado;
+      playMusic(MUSIC.bonus);
+      // spawn some immediate bonus items
+      for (let i=0;i<4;i++){
+        setTimeout(()=> {
+          const which = Math.floor(Math.random()*IMG.bonus.length);
+          bananas.push({ x: WORLD.w + 60 + Math.random()*60, y: 200 + Math.random()*400, r:36, speed: 260, kind:'bonus', value: which==0?1:2, img: IMG.bonus[which] });
+        }, i*250);
+      }
+      // the ongoing spawn is handled in update loop under bonusActive
+    }
+
+    function endBossPhase(){
+      bossActive = false;
+      bossSpawned = false;
+      bossObject = null;
+      playSfx('woosh', 0.7);
+      playMusic(MUSIC.base);
+      currentBg = IMG.fondos.calc;
+    }
+
+    function endBonusPhase(){
+      bonusActive = false;
+      playSfx('woosh', 0.7);
+      playMusic(MUSIC.base);
+      currentBg = IMG.fondos.calc;
+    }
+
+    // --------------- INPUT ---------------
+    let isPointerDown = false, wasInhaling = false, inhaleSfxTimer = 0;
+    canvas.addEventListener('pointerdown', async (e) => {
+      // resume audio context if needed (handled by Audio elements; not using WebAudio)
+      isPointerDown = true;
+      // quick reaction: start inhaling earlier by setting isDown
+      if (allowInput && !gameOver) {
+        wasInhaling = true;
+      }
+      hint && (hint.style.display = 'none');
+    });
+    window.addEventListener('pointerup', () => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+      // release event -> set justReleased and handle in update
+      wasInhaling = false;
+      justReleased = true;
+    });
+
+    // --------------- UPDATE ---------------
+    function update(dt) {
+      // If we are showing boss cartel before spawn:
+      if (bossActive && !bossSpawned) {
+        bossTimer -= dt;
+        if (bossTimer <= 0) spawnBoss();
+        return; // freeze other spawns while cartel shows
+      }
+
+      // background change triggers (also play a woosh slightly earlier)
+      if (!bossActive && !bonusActive) {
+        if (POINTS.total >= BOSS_THRESHOLD && !bossActive) {
+          beginBossPhase();
+          return;
+        }
+        if (POINTS.total >= BONUS_THRESHOLD && !bonusActive && !bossActive) {
+          beginBonusPhase();
+          return;
+        }
+      }
+
+      // movement of suelo and clouds
+      for (let s of sueloScroll) { s.x -= SPEED.scroll * dt; if (s.x <= -WORLD.w) s.x += WORLD.w * 2; }
+      for (const c of CLOUD.list) { c.x -= c.speed * dt; if (c.x + c.w < 0) { c.x = WORLD.w + rand(10,100); c.y = rand(50, WORLD.h/2); } }
+
+      // difficulty ramp
+      SPAWN.timer += dt; SPAWN.diffTimer += dt;
+      if (SPAWN.timer >= SPAWN.interval) { SPAWN.timer = 0; if (!bossActive && !bonusActive) spawnObstacle(); }
+      if (SPAWN.diffTimer >= 10) { SPAWN.diffTimer = 0; SPEED.scroll = Math.min(SPEED.scroll + SPEED.inc, SPEED.max); SPAWN.interval = Math.max(SPAWN.min, SPAWN.interval - 0.05); }
+
+      // player inhale / physics
+      if (isPointerDown && CHARGE.cooldown <= 0 && allowInput && !gameOver) {
+        player.state = 'inhalando';
+        // quicker reaction: apply a stronger impulse when starting inhaling from stationary
+        const boost = (player.vy > 0) ? 1.2 : 1.0;
+        player.vy += PHYSICS.inhaleForce * boost * dt;
+        CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+        inhaleSfxTimer += dt;
+        if (inhaleSfxTimer >= 0.36) { playSfx('inhalar', 0.18); inhaleSfxTimer = 0; }
+      }
+
+      // gravity
+      player.vy += PHYSICS.gravity * dt;
+      if (player.vy > PHYSICS.maxVy) player.vy = PHYSICS.maxVy;
+      player.y += player.vy * dt;
+
+      // limit top so player never disappears
+      if (player.y < 110) { player.y = 110; player.vy = Math.min(player.vy, 20); }
+
+      // ground collision
+      const sueloTop = WORLD.h - GROUND_H - player.r;
+      if (player.y > sueloTop) { player.y = sueloTop; player.vy = 0; }
+
+      // release -> pulse / grito
+      if (justReleased) {
+        justReleased = false;
+        if (CHARGE.cooldown <= 0 && allowInput && !gameOver) {
+          // pulse
           const t = CHARGE.value / CHARGE.max;
           const rad = PULSE.base + t * (PULSE.max - PULSE.base);
           pulses.push({ x: player.x + 40, y: player.y, rad, life: PULSE.life });
-          CHARGE.cooldown = CHARGE.cooldownBase;
-          CHARGE.value = 0;
-          player.state = 'gritando';
+          // sound (lowered)
           playSfx('grito', 0.35);
+          CHARGE.value = 0;
+          CHARGE.cooldown = CHARGE.cooldownBase;
         }
       }
-      inhaleSfxTimer = 0;
-    }
+      if (CHARGE.cooldown > 0) CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
 
-    // cooldown of shout
-    if (CHARGE.cooldown > 0) {
-      CHARGE.cooldown -= dt;
-      if (CHARGE.cooldown < 0) CHARGE.cooldown = 0;
-    }
-
-    if (!isDown && CHARGE.cooldown === 0 && player.state !== 'mareado') {
-      player.state = 'calmado';
-    }
-
-    // particles
-    if (Math.random() < 0.1) {
-      particles.push({
-        x: player.x + rand(-20, 20),
-        y: player.y + rand(-20, 20),
-        vx: rand(-15, 15),
-        vy: rand(-30, -10),
-        life: 1.0,
-        color: `rgba(255, ${200 + Math.floor(55*Math.random())}, 255,`
-      });
-    }
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.life -= dt * 0.5;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-
-    // pulses damage obstacles
-    for (let i = pulses.length - 1; i >= 0; i--) {
-      const p = pulses[i];
-      p.life -= dt;
-      if (p.life <= 0) { pulses.splice(i, 1); continue; }
-      for (let j = obstacles.length - 1; j >= 0; j--) {
-        const o = obstacles[j];
-        if (dist2(p.x, p.y, o.x, o.y) <= (p.rad + o.r) * (p.rad + o.r)) {
-          obstacles.splice(j, 1);
-          POINTS.total += 2;
+      // pulses affect obstacles
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        p.life -= dt;
+        if (p.life <= 0) { pulses.splice(i,1); continue; }
+        for (let j = obstacles.length - 1; j >= 0; j--) {
+          const o = obstacles[j];
+          const rsum = p.rad + (o.r||40);
+          if (dist2(p.x, p.y, o.x, o.y) <= rsum*rsum) {
+            // remove obstacle
+            obstacles.splice(j,1);
+            POINTS.total += (o.kind==='bonus' ? (o.value||1) : 2);
+            playSfx('recolectar', 0.45);
+          }
         }
       }
-    }
 
-    // move obstacles & bananas
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-      const o = obstacles[i];
-      o.x -= o.speed * dt;
-      if (o.x < -120) obstacles.splice(i, 1);
-    }
-    for (let i = bananas.length - 1; i >= 0; i--) {
-      const b = bananas[i];
-      b.x -= b.speed * dt;
-      if (b.x < -120) bananas.splice(i, 1);
-    }
-
-    // collisions with obstacles -> game over
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-      const o = obstacles[i];
-      if (dist2(o.x, o.y, player.x, player.y) <= (o.r + player.r) * (o.r + player.r)) {
-        // play collision - quieter
-        playSfx('chocar', 0.5);
-        // show panel and stop loop
-        // if in bossActive, ensure we restart to boss
-        if (gameState === 'bossActive') returnToBoss = true;
-        onGameOver();
-        return;
+      // move obstacles & check collisions
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        // if boss foam: they move faster to left
+        const sp = o.speed || SPEED.scroll;
+        o.x -= sp * dt;
+        if (o.x < -120) { obstacles.splice(i,1); continue; }
+        // collision with player
+        const rsum = (o.r||40) + player.r;
+        if (dist2(o.x, o.y, player.x, player.y) <= rsum*rsum) {
+          // hit -> game over (but if bossActive we may want restart in boss)
+          canvas.classList.add('shake');
+          setTimeout(()=>canvas.classList.remove('shake'), 400);
+          playSfx('chocar', 0.7);
+          allowSfx = false; // avoid further SFX
+          panelMsg.textContent = "El erizo ha sido atrapado por la espuma!";
+          panel.classList.add('show');
+          gameOver = true;
+          // stop music (boss music should stop too)
+          stopMusic();
+          // If bossActive we want to restart *in boss phase* after short pause; else reset to menu or normal restart
+          // We'll pause a bit and then leave restart to the button handler
+          return;
+        }
       }
-    }
 
-    // collisions with bananas
-    for (let i = bananas.length - 1; i >= 0; i--) {
-      const b = bananas[i];
-      if (dist2(b.x, b.y, player.x, player.y) <= (b.r + player.r) * (b.r + player.r)) {
-        bananas.splice(i, 1);
-        if (b.kind === 'cuenco') {
-          POINTS.total += 5;
-          playSfx('recolectar', 0.65);
+      // move bananas (collectables including bonus patitos)
+      for (let i = bananas.length - 1; i >= 0; i--) {
+        const b = bananas[i];
+        if (!b.img) { bananas.splice(i,1); continue; }
+        b.x -= (b.speed || SPEED.scroll) * dt;
+        if (b.x < -120) { bananas.splice(i,1); continue; }
+        const rsum = (b.r||32) + player.r;
+        if (dist2(b.x, b.y, player.x, player.y) <= rsum*rsum) {
+          // collect
+          bananas.splice(i,1);
+          POINTS.total += (b.value || 1);
+          playSfx('recolectar', 0.45);
+        }
+      }
+
+      // boss-specific behavior
+      if (bossActive && bossSpawned) {
+        bossTimer -= dt;
+        // boss shakes slightly while alive: spawn foam at interval
+        if (Math.random() < 0.03) bossFire();
+        if (bossTimer <= 0) {
+          // end boss
+          endBossPhase();
+        }
+      }
+
+      // bonus behavior: spawn more bonus items while active
+      if (bonusActive) {
+        bonusTimer -= dt;
+        if (bonusTimer <= 0) {
+          endBonusPhase();
         } else {
-          POINTS.total += 1;
-          playSfx('recolectar', 0.55);
+          if (Math.random() < 0.18) {
+            const which = Math.floor(Math.random()*IMG.bonus.length);
+            bananas.push({ x: WORLD.w + 60, y: 180 + Math.random()*420, r:36, speed: 240, kind:'bonus', value: (which===0?1:2), img: IMG.bonus[which] });
+          }
         }
       }
+
+      // score & HUD
+      scoreEl.textContent = "Puntos: " + POINTS.total;
+      bestEl.textContent = "Mejor: " + POINTS.best;
+      menuBest.textContent = "Mejor puntuación: " + POINTS.best;
+      zenFill.style.width = (CHARGE.value/CHARGE.max)*100 + "%";
     }
 
-    // HUD update
-    scoreEl.textContent = "Puntos: " + POINTS.total;
-    zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
-    zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
-
-    // unlocks or other checks can be handled here
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, WORLD.w, WORLD.h);
-
-    // background
-    if (currentBg) ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
-    else { ctx.fillStyle = '#1b1b1f'; ctx.fillRect(0, 0, WORLD.w, WORLD.h); }
-
-    // if gameState is bossIntro we want to show only bg and possibly static clouds (we show clouds but they won't move)
-    // Nubes por capas
-    for (let pass = 0; pass < 3; pass++) {
-      for (const c of CLOUD.list) {
-        if (c.band !== pass) continue;
-        if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
-        else {
-          ctx.fillStyle = 'rgba(255,255,255,.85)';
-          ctx.beginPath();
-          ctx.ellipse(c.x + c.w/2, c.y + c.h/2, c.w/2, c.h/3, 0, 0, Math.PI*2);
-          ctx.fill();
+    // --------------- DRAW ---------------
+    function draw() {
+      // clear
+      ctx.clearRect(0,0,WORLD.w,WORLD.h);
+      // background
+      if (currentBg) ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
+      // if bossActive and not spawned yet, draw cartel centered
+      if (bossActive && !bossSpawned && IMG.boss.cartel) {
+        ctx.drawImage(IMG.boss.cartel, WORLD.w/2 - 200, WORLD.h/2 - 80, 400, 160);
+        return; // don't draw everything else while cartel shows
+      }
+      // clouds
+      for (let pass=0; pass<3; pass++){
+        for (const c of CLOUD.list) {
+          if (c.band !== pass) continue;
+          if (c.img) ctx.drawImage(c.img, c.x, c.y, c.w, c.h);
         }
       }
-    }
-
-    // Coleccionables
-    for (const b of bananas) {
-      if (b.kind === 'cuenco' && IMG.cuenco) {
-        ctx.drawImage(IMG.cuenco, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
-      } else if (IMG.banana) {
-        ctx.drawImage(IMG.banana, b.x-b.r, b.y-b.r, b.r*2, b.r*2);
-      } else {
-        ctx.fillStyle = '#facc15';
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+      // pulses
+      for (const p of pulses) {
+        const alpha = Math.max(0, p.life / PULSE.life);
+        ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
+        ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2); ctx.stroke();
       }
+      // obstacles
+      for (const o of obstacles) {
+        if (o.img) ctx.drawImage(o.img, o.x - (o.r||40), o.y - (o.r||40), (o.r||40)*2, (o.r||40)*2);
+        else { ctx.fillStyle = '#ff4444'; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill(); }
+      }
+      // bananas / bonus items
+      for (const b of bananas) {
+        if (b.img) ctx.drawImage(b.img, b.x - (b.r||32), b.y - (b.r||32), (b.r||32)*2, (b.r||32)*2);
+        else { ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); }
+      }
+      // draw boss if present (with small vibration)
+      if (bossActive && bossSpawned && bossObject && bossObject.img) {
+        const vib = Math.sin(performance.now()/100)*4;
+        ctx.drawImage(bossObject.img, bossObject.x + vib, bossObject.y, bossObject.w, bossObject.h);
+      }
+      // ground
+      for (let s of sueloScroll) {
+        if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
+        else { ctx.fillStyle='#4ade80'; ctx.fillRect(s.x, WORLD.h-GROUND_H, WORLD.w, GROUND_H); }
+      }
+      // particles
+      for (const p of particles) {
+        ctx.fillStyle = p.color + Math.max(0,p.life) + ")";
+        ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
+      }
+      // aura / pulse effect under player
+      const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300);
+      ctx.fillStyle = `rgba(255,255,255,${0.25*pulse})`;
+      ctx.beginPath(); ctx.arc(player.x, player.y, 60, 0, Math.PI*2); ctx.fill();
+      // erizo sprite (use state if available)
+      let erizoImg = IMG.erizo.calmado;
+      if (player.state === 'inhalando' && IMG.erizo.inhalando) erizoImg = IMG.erizo.inhalando;
+      if (player.state === 'gritando' && IMG.erizo.gritando) erizoImg = IMG.erizo.gritando;
+      if (player.state === 'calmado' && Math.random()<0.001 && IMG.erizo.parpadeo) erizoImg = IMG.erizo.parpadeo; // occasional blink
+      if (erizoImg) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
     }
 
-    // Obstáculos
-    for (const o of obstacles) {
-      const img = IMG.obstaculos[o.kind] || null;
-      if (img) ctx.drawImage(img, o.x-o.r, o.y-o.r, o.r*2, o.r*2);
-      else { ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill(); }
-    }
-
-    // Pulsos
-    for (const p of pulses) {
-      const alpha = Math.max(0, p.life / PULSE.life);
-      ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
-      ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.rad, 0, Math.PI*2); ctx.stroke();
-    }
-
-    // Suelo
-    for (let s of sueloScroll) {
-      if (IMG.suelo) ctx.drawImage(IMG.suelo, s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
-      else { ctx.fillStyle = '#4ade80'; ctx.fillRect(s.x, WORLD.h - GROUND_H, WORLD.w, GROUND_H); }
-    }
-
-    // Partículas zen
-    for (const p of particles) {
-      const alpha = Math.max(0, p.life);
-      ctx.fillStyle = p.color + alpha + ")";
-      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
-    }
-
-    // Aura zen / slightly pulsing
-    const pulse = 0.6 + 0.2 * Math.sin(performance.now()/300);
-    ctx.fillStyle = `rgba(255,255,255,${0.25 * pulse})`;
-    ctx.beginPath(); ctx.arc(player.x, player.y, 60, 0, Math.PI*2); ctx.fill();
-
-    // Sprite erizo: choose based on state and occasionally parpadeo
-    const useBlink = Math.random() < 0.006; // occasional blink
-    let erizoImg = IMG.erizo.calmado;
-    if (player.state === 'inhalando' && IMG.erizo.inhalando) erizoImg = IMG.erizo.inhalando;
-    else if (player.state === 'gritando' && IMG.erizo.gritando) erizoImg = IMG.erizo.gritando;
-    else if (useBlink && IMG.erizo.parpadeo) erizoImg = IMG.erizo.parpadeo;
-
-    if (erizoImg) {
-      const s = player.r * 2.0;
-      ctx.drawImage(erizoImg, player.x - s/2, player.y - s/2, s, s);
-    } else {
-      ctx.fillStyle = '#8b5cf6';
-      ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
-    }
-
-    // If game over, we early return to avoid drawing transient effects
-    if (gameState === 'gameOver') return;
-  }
-
-  // --------------- Main loop ----------------
-  let lastFrame = performance.now();
-  let loopId = null;
-
-  function frame(now) {
-    if (!now) now = performance.now();
-    const dt = Math.min(0.033, (now - lastFrame) / 1000);
-    lastFrame = now;
-
-    update(dt);
-    draw();
-
-    // continue loop only if not gameOver or menu; if gameState is gameOver we stop frames until restart (panel will be shown)
-    if (gameState !== 'gameOver' && gameState !== 'menu') {
+    // --------------- GAME LOOP ---------------
+    function frame(now) {
+      const dt = Math.min(0.033, (now - lastFrame)/1000);
+      lastFrame = now;
+      if (!gameOver) update(dt);
+      draw();
       loopId = requestAnimationFrame(frame);
     }
-  }
 
-  // --------------- Countdown (menu -> start) ----------------
-  function showCountdown(onDone) {
-    // picks 3 random absurd images + GO
-    const pool = IMG.contador.filter(Boolean).slice();
-    const picks = [];
-    for (let i = 0; i < 3; i++) {
-      if (!pool.length) break;
-      const idx = Math.floor(Math.random() * pool.length);
-      picks.push(pool.splice(idx,1)[0]);
-    }
-    picks.push(IMG.contadorGo || null);
-
-    countdownEl.classList.add('show');
-    let idx = 0;
-    function next() {
-      if (idx < picks.length) {
-        const im = picks[idx];
-        if (im) {
-          countNum.innerHTML = `<img src="${im.src}" alt="count">`;
-        } else {
-          countNum.textContent = idx === picks.length - 1 ? "¡YA!" : (idx+1);
-        }
-        // play soft gong
-        playSfx('gong', 0.6);
-        idx++;
-        setTimeout(next, 900);
-      } else {
-        countdownEl.classList.remove('show');
-        if (typeof onDone === 'function') onDone();
-      }
-    }
-    next();
-  }
-
-  // --------------- Boss flow ----------------
-  let bossEnterTimeout = null;
-  let bossActiveInterval = null;
-  let bossCountInterval = null;
-  let bossCountdownImageIndex = 0;
-  let bossObject = null; // {x,y,w,h}
-
-  async function startBossSequence() {
-    // set state already set to bossIntro
-    gameState = 'bossIntro';
-    // stop normal music with fade
-    if (currentMusic && !currentMusic.paused) {
-      fadeMusic(currentMusic, 0, 250);
-      setTimeout(()=>{ try{ currentMusic.pause(); } catch(e){} }, 280);
+    // --------------- HELPERS: boss fire ---------------
+    function bossFire() {
+      if (!bossObject) return;
+      // spawn foam projectile that moves leftwards
+      const img = IMG.boss.espumas[Math.floor(Math.random()*IMG.boss.espumas.length)];
+      const y = bossObject.y + 30 + Math.random()*(bossObject.h - 60);
+      obstacles.push({ x: bossObject.x - 20, y, r:36, speed: 320 + Math.random()*60, img, kind:'foam' });
     }
 
-    // show "cuidado" cartel in the overlay for 1800ms
-    if (IMG.boss.cartel) {
-      bossIntroContainer.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = IMG.boss.cartel.src;
-      bossIntroContainer.appendChild(img);
-      bossIntroContainer.style.display = 'block';
-    } else {
-      // fallback text (not likely)
-      bossIntroContainer.innerHTML = '<div class="card" style="padding:10px;"><strong style="font-size:20px">¡Cuidado con la espuma!</strong></div>';
-      bossIntroContainer.style.display = 'block';
-    }
-
-    // slight delay for player to read
-    await new Promise(res => setTimeout(res, 1800));
-    bossIntroContainer.style.display = 'none';
-
-    // spawn boss entering
-    gameState = 'bossActive';
-    bossTimerLeft = BOSS_DURATION;
-    // play boss music
-    try {
-      currentMusic = MUSIC.boss;
-      currentMusic.currentTime = 0;
-      if (musicEnabled) {
-        fadeMusic(currentMusic, 0.55, 350);
-      }
-    } catch(e) {}
-
-    // initialize boss object (on right side)
-    bossObject = { x: WORLD.w + 120, y: WORLD.h - GROUND_H - 140, w: 220, h: 220 };
-    // animate entry a bit: we'll move it leftwards a bit over 600ms
-    const entryDuration = 600;
-    const entryStart = performance.now();
-    const entryStartX = bossObject.x;
-    const entryTargetX = WORLD.w - bossObject.w - 40;
-    function entryStep(ts) {
-      const t = Math.min(1, (ts - entryStart) / entryDuration);
-      bossObject.x = entryStartX + (entryTargetX - entryStartX) * t;
-      if (t < 1) requestAnimationFrame(entryStep);
-    }
-    requestAnimationFrame(entryStep);
-
-    // small pause after entry then start launching foam and start countdown
-    await new Promise(res => setTimeout(res, 650));
-
-    // start boss foam attack interval
-    bossActiveInterval = setInterval(() => {
-      // spawn espuma projectile from boss
-      spawnBossFoam();
-    }, 650); // rate of foam - adjust for difficulty
-
-    // start countdown visuals (if numbered images exist use them)
-    bossCountdownImageIndex = 0;
-    let countdownStep = 0;
-    function showBossCountdownStep() {
-      const idx = Math.floor(bossTimerLeft); // integer seconds left
-      if (IMG.boss.countdown[idx-1]) {
-        bossIntroContainer.innerHTML = `<img src="${IMG.boss.countdown[idx-1].src}" alt="${idx}">`;
-        bossIntroContainer.style.display = 'block';
-        setTimeout(()=> bossIntroContainer.style.display='none', 700);
-      } else {
-        // fallback show number on center
-        bossIntroContainer.innerHTML = `<div style="font-size:64px; color:#fff; font-weight:900;">${idx}</div>`;
-        bossIntroContainer.style.display = 'block';
-        setTimeout(()=> bossIntroContainer.style.display='none', 700);
-      }
-    }
-
-    // per-second tick
-    bossCountInterval = setInterval(() => {
-      bossTimerLeft -= 1;
-      if (bossTimerLeft <= 0) {
-        // end boss phase
-        clearInterval(bossActiveInterval);
-        bossActiveInterval = null;
-        clearInterval(bossCountInterval);
-        bossCountInterval = null;
-        bossObject = null;
-        // play swoosh and transition back
-        playSfx('woosh', 0.85);
-        // fade boss music out
-        try { fadeMusic(MUSIC.boss, 0, 250); setTimeout(()=> { try{ MUSIC.boss.pause(); } catch(e){} }, 280); } catch(e) {}
-        // back to normal bg and state
-        currentBg = IMG.fondos.calc;
-        bgStage = 0;
-        gameState = 'bossOutro';
-        // brief delay before return to normal
-        setTimeout(() => {
-          gameState = 'normal';
-          // resume base music
-          playMusic(MUSIC.base);
-        }, 500);
-      } else {
-        // show number and soft gong
-        showBossCountdownStep();
-        playSfx('gong', 0.55);
-      }
-    }, 1000);
-
-    // Start the countdown immediate visual
-    showBossCountdownStep();
-  }
-
-  function spawnBossFoam() {
-    // choose random foam sprite
-    const foamImg = IMG.boss.espumas.length ? IMG.boss.espumas[Math.floor(rand(0, IMG.boss.espumas.length))] : null;
-    // spawn from bossObject position with leftward velocity and some vertical variation
-    if (!bossObject) return;
-    const foam = {
-      x: bossObject.x - 30,
-      y: bossObject.y + Math.random()*bossObject.h*0.7,
-      vx: - (160 + Math.random()*140),
-      vy: rand(-20, 60),
-      img: foamImg,
-      r: 28
-    };
-    // store in obstacles (they are treated like obstacles)
-    obstacles.push({ x: foam.x, y: foam.y, r: foam.r, speed: Math.abs(foam.vx), foamData: foam, isBossFoam: true });
-  }
-
-  // If boss spawns obstacles as normal obstacles move code will handle by subtracting o.x by o.speed.
-  // For boss foam we used o.foamData.vx so we need to update them in movement loop specially; adjust update loop:
-  // We'll patch movement by checking o.isBossFoam; modify update() accordingly (we'll do that by replacing earlier movement code with more careful loops).
-  // To make this coherent, rework a little: We'll adjust the obstacle movement code here to account for boss foam.
-
-  // To ensure boss foam moves even if SPAWN interval is disabled, we must update them each frame independent of normal obstacles.
-
-  // We already push boss foam into obstacles array with isBossFoam true and foamData with vx/vy.
-
-  // --------------- Playback controls ----------------
-  function playMusic(audioEl) {
-    if (!musicEnabled) return;
-    if (!audioEl) return;
-    try {
-      if (currentMusic && currentMusic !== audioEl) {
-        fadeMusic(currentMusic, 0, 200);
-        setTimeout(()=>{ try{ currentMusic.pause(); } catch(e){} }, 220);
-      }
-      currentMusic = audioEl;
-      currentMusic.currentTime = 0;
-      fadeMusic(currentMusic, 0.45, 260);
-    } catch(e) {}
-  }
-  function toggleMusic() {
-    musicEnabled = !musicEnabled;
-    if (musicEnabled) {
-      if (currentMusic) try { currentMusic.play().catch(()=>{}); } catch(e){}
-      btnMusic.textContent = "🔊";
-    } else {
-      if (currentMusic) try { currentMusic.pause(); } catch(e){}
-      btnMusic.textContent = "🔇";
-    }
-  }
-  btnMusic.addEventListener('click', toggleMusic);
-
-  // update best display
-  function updateBestDisplay() {
-    bestScoreEl.textContent = "Mejor: " + POINTS.best;
-    menuBestEl.textContent = "Mejor puntuación: " + POINTS.best;
-  }
-  updateBestDisplay();
-
-  // ---------- Input wiring ----------
-  canvas.addEventListener('pointerdown', async (e) => {
-    // convert to withinCanvas based on rendered coords
-    if (!withinCanvas(e.clientX, e.clientY)) return;
-    // resume audio context or audio playback if blocked by browser
-    try { /* no WebAudio used intensively now */ } catch(e) {}
-    // Play base music on first interaction if in menu or normal
-    if (gameState === 'menu') {
-      // start sequence
+    // --------------- BUTTON HANDLERS ---------------
+    btnStart.addEventListener('click', () => {
       menuPanel.classList.remove('show');
-      // show countdown and start
-      showCountdown(() => {
-        // hide countdown and start
-        resetForNormal();
+      resetGameState();
+      playMusic(MUSIC.base);
+      lastFrame = performance.now();
+      requestAnimationFrame(frame);
+    });
+
+    btnRestart.addEventListener('click', () => {
+      // small pause to let player digest
+      panel.classList.remove('show');
+      setTimeout(()=>{
+        // if died in boss and we want to restart inside boss, respawn boss state - for now restart full run but preserve TEST_MODE conditions
+        resetGameState();
         playMusic(MUSIC.base);
         lastFrame = performance.now();
         requestAnimationFrame(frame);
-      });
-    }
-    isDown = true;
-    e.preventDefault();
-    hint.style.display = 'none';
-  });
-  window.addEventListener('pointerup', (e) => {
-    if (!isDown) return;
-    isDown = false;
-    justReleased = true;
-    e.preventDefault();
-  });
-
-  // keyboard support for quick testing
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') { isDown = true; }
-  });
-  window.addEventListener('keyup', (e) => {
-    if (e.code === 'Space') { isDown = false; justReleased = true; }
-  });
-
-  // ---------- Loader & Startup ----------
-  async function start() {
-    // show loader while assets load
-    loader.style.display = 'flex';
-    try {
-      await loadAll();
-    } catch(e) {
-      console.warn("Error cargando assets", e);
-    }
-    // hide loader
-    setTimeout(()=> { loader.style.display = 'none'; }, 400);
-
-    // init clouds & positions
-    initClouds();
-
-    // set event on start button
-    btnStart.addEventListener('click', () => {
-      menuPanel.classList.remove('show');
-      showCountdown(() => {
-        // if user wants immediate boss (test)
-        if (TEST_MODE) {
-          // begin game but optionally set points to test boss thresholds
-          resetForNormal();
-          // optionally give points to test threshold: but we'll start normal and let playing handle points
-          playMusic(MUSIC.base);
-          lastFrame = performance.now();
-          requestAnimationFrame(frame);
-        } else {
-          resetForNormal();
-          playMusic(MUSIC.base);
-          lastFrame = performance.now();
-          requestAnimationFrame(frame);
-        }
-      });
+      }, 900);
     });
 
-    // finally ensure loader image randomized
-    try {
-      const idx = Math.floor(Math.random() * IMG.loaders.length);
-      if (IMG.loaders[idx]) loaderImg.src = IMG.loaders[idx].src;
-    } catch(e) {}
+    // --------------- PRELOAD & START ---------------
+    // rotate loader image
+    (function pickLoader(){
+      const list = ASSETS.loaders;
+      const pick = list[Math.floor(Math.random()*list.length)];
+      loaderImg.src = pick;
+    })();
 
-    // If we want to quickly test boss we can set POINTS.total >= threshold and call startBossSequence() directly from console
-    // Start the menu music softly to signal readiness (only if allowed)
-    try {
-      if (musicEnabled) { currentMusic = MUSIC.base; currentMusic.currentTime = 0; currentMusic.volume = 0.0; currentMusic.play().catch(()=>{}); fadeMusic(currentMusic, 0.35, 350); }
-    } catch(e) {}
-  }
+    await loadAll();
+    // init clouds and canvas fit
+    initClouds();
+    fit();
 
-  // --------------- Extra: adapt obstacle movement to boss foam items ----------------
-  // We'll override part of update movements — but to keep code simple and safe, we will treat obstacles with isBossFoam specially in update,
-  // by scanning obstacles array and if o.isBossFoam we move it using its foamData.vx/vy instead of o.speed.
-  // Since earlier movement code moved all obstacles by o.x -= o.speed * dt, we will change that segment here:
-  // (We must ensure to update the obstacles moving code to cover both cases.)
-  // For clarity, we will patch update movement loops by re-defining a movement function:
+    // hide loader after short time (giving assets time)
+    setTimeout(()=> { loader.style.display = 'none'; }, 800);
 
-  // To ensure the above special-case logic is used, we will wrap movement into a function and call it in update.
-  // (Because of code structure above we already have movement logic; to avoid duplication, let's override movement by replacing those loops:)
-  // We'll create a small function and call in update (so it's used). For brevity, we'll not rework the earlier code; instead we ensure obstacles that are boss foam have property isBossFoam and speed is used for horizontal movement anyway. That's acceptable: we spawn boss foam with speed set to abs(vx) and it'll move left by o.x -= o.speed*dt. That is okay.
+    // set best display
+    bestEl.textContent = "Mejor: " + POINTS.best;
+    menuBest.textContent = "Mejor puntuación: " + POINTS.best;
 
-  // ----------------- Start app -----------------
-  // Begin loading and init
-  start();
+    // start paused on menu; user presses "Jugar"
 
-  // Expose some state for debugging in console if needed
-  window.__AE = {
-    IMG, ASSETS, POINTS, gameState,
-    startBossSequence: startBossSequence,
-    resetForNormal: resetForNormal,
-    playSfx
-  };
+    // --------------- Clean up / On Exit ---------------
+    // Save best on unload
+    window.addEventListener('beforeunload', () => {
+      localStorage.setItem('bestScore', String(POINTS.best));
+    });
 
-  // small helper: ensure best update on load
-  updateBestDisplay();
+    // Ensure music stops if tab hidden (to avoid weird autoplay)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { for (let k in MUSIC) MUSIC[k].pause(); }
+    });
 
-  // Small responsiveness fix: pointer event listeners for mobile outside canvas
-  // Allow touch anywhere on screen to act as pointerdown for convenience
-  document.body.addEventListener('touchstart', (e) => {
-    if (e.touches && e.touches.length) {
-      const t = e.touches[0];
-      if (withinCanvas(t.clientX, t.clientY)) {
-        // simulate pointerdown if not already down
-        isDown = true;
-        hint.style.display = 'none';
-      }
-    }
-  }, { passive: true });
-  document.body.addEventListener('touchend', (e) => {
-    if (isDown) { isDown = false; justReleased = true; }
-  });
-
-  // Ensure canvas fits initially
-  fit();
-
-})();
-</script>
+    // --------------- NOTES ---------------
+    // - TEST_MODE true sets boss threshold low for easier testing
+    // - Boss uses assets in assets/boss/ (pasta_feroz.png, espuma_boss*.png, cuidado_espuma.png, 1.png..10.png)
+    // - Bonus uses patito1.png and patito2.png in assets/boss/
+    // - Replace sounds if you want different ones; volumes are lowered for grito and recolectar
+    // - If you want 'restart stays in boss' behavior, we can modify restart handler to re-init boss instead of full reset
+  })();
+  </script>
 </body>
 </html>
