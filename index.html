@@ -986,5 +986,156 @@ function draw(){
     );
   }
 }
+/* =====================================================
+   BLOQUE 5/5 — GAME LOOP, INPUT, INIT & CLOSE
+   ===================================================== */
+
+// ======== UPDATE LOOP =========
+function update(dt){
+  if(!started) return;
+
+  // velocidad progresiva con tiempo
+  SPEED.scroll = Math.min(SPEED.scroll + dt * SPEED.accel, SPEED.max);
+
+  // mover erizo
+  hedgehog.y += hedgehog.vy * dt;
+  hedgehog.vy += hedgehog.gravity * dt;
+
+  // límites verticales
+  if(hedgehog.y < 80) hedgehog.y = 80;
+  if(hedgehog.y > WORLD.h - 160) hedgehog.y = WORLD.h - 160;
+
+  // si está cargando
+  if(CHARGE.active){
+    CHARGE.timer += dt * 0.6;
+    if(CHARGE.timer >= 1){
+      blowRelease();
+    }
+  }
+
+  // disminuir cooldown grito
+  if(hedgehog.blowCD > 0){
+    hedgehog.blowCD -= dt;
+    if(hedgehog.blowCD < 0) hedgehog.blowCD = 0;
+  }
+
+  // mover objetos
+  updateObjects(dt);
+
+  // colisiones
+  checkCollisions();
+
+  // boss / bonus timers
+  if(inBossPhase){
+    bossTimer += dt;
+    if(bossTimer >= bossDuration){
+      endBossPhase();
+    }
+  }
+  if(inBonusPhase){
+    bonusTimer += dt;
+    if(bonusTimer >= bonusDuration){
+      endBonusPhase();
+    }
+  }
+}
+
+// ======== MAIN LOOP =========
+let lastTime = 0;
+function gameLoop(t){
+  loopId = requestAnimationFrame(gameLoop);
+  const dt = Math.min((t - lastTime) / 1000, 0.03);
+  lastTime = t;
+
+  update(dt);
+  draw();
+}
+
+// ======== INPUT =========
+function startCharging(){
+  if(hedgehog.blowCD > 0) return;
+  CHARGE.active = true;
+  CHARGE.timer = 0;
+}
+
+function releaseCharging(){
+  if(CHARGE.active){
+    blowRelease();
+  }
+}
+
+window.addEventListener('keydown', e=>{
+  if(e.key === ' '){
+    startCharging();
+  }
+
+  // TEST KEYS
+  if(e.key === 'j' || e.key === 'J'){
+    startBossPhase(); 
+  }
+  if(e.key === 'b' || e.key === 'B'){
+    startBonusPhase();
+  }
+});
+window.addEventListener('keyup', e=>{
+  if(e.key === ' '){
+    releaseCharging();
+  }
+});
+
+// TOUCH
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  startCharging();
+});
+canvas.addEventListener('touchend', e=>{
+  e.preventDefault();
+  releaseCharging();
+});
+
+// ======== START GAME =========
+function startGame(){
+  if(started) return;
+  started = true;
+  score = 0;
+  SPEED.scroll = SPEED.start;
+  hedgehog.y = WORLD.h/2;
+  spawnTimer.reg = 0;
+  spawnTimer.bonus = 0;
+
+  objectsNormal.length = 0;
+  objectsBonus.length = 0;
+  objectsBoss.length = 0;
+
+  switchToNormalWorld();
+  playMusic(MUSIC.base);
+
+  lastTime = performance.now();
+  gameLoop(lastTime);
+}
+
+// ======== LOADING / INIT =========
+window.onload = ()=>{
+
+  // loading visuals stop
+  document.getElementById("loading").style.display = "none";
+
+  // breathing effect on erizo start
+  const erizo = document.getElementById("erizo")
+  if(erizo){
+    erizo.style.display = "block";
+  }
+
+  // small wait before start
+  setTimeout(()=>{
+    startGame();
+  }, 500);
+};
+
+// END IIFE & script
+})();
+</script>
+</body>
+</html>
 
 
