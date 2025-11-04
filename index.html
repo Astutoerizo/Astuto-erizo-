@@ -82,15 +82,15 @@
 
     </div>
 
-    <script>
+   <script>
     (async () => { 'use strict';
         // ================= TEST MODE ================= 
-        const TEST_MODE = true; // true while testing (J/K/L/B) 
+        const TEST_MODE = true; 
         // ============================================== 
         // ===== CONFIG ===== 
         const WORLD = { w: 540, h: 960 };
-        const BASE_SPEED_SCROLL = 280; // NEW: Base speed
-        const BASE_SPAWN_INTERVAL = 1.2; // NEW: Base spawn interval
+        const BASE_SPEED_SCROLL = 280; 
+        const BASE_SPAWN_INTERVAL = 1.2; 
         const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
         const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
         const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
@@ -98,8 +98,9 @@
         const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
         const PHYSICS = { gravity: 600, inhaleForce: -1400, maxVy: 900 }; 
         const GROUND_H = 180;
-        const BOSS_DURATION = 10; // seconds 
-        // MODIFICADO: New progression thresholds
+        const BOSS_DURATION = 10; 
+        
+        // Umbrales Progresivos Ajustados
         const BOSS_SCORE_1 = TEST_MODE ? 5 : 50; 
         const BONUS_SCORE_1 = TEST_MODE ? 10 : 75; 
         const BOSS_SCORE_2 = 150; 
@@ -110,7 +111,7 @@
         // ===== DOM ===== 
         const canvas = document.getElementById('game'); 
         const ctx = canvas.getContext('2d');
-        const wrap = document.getElementById('wrap'); // NEW: For screen shake
+        const wrap = document.getElementById('wrap'); 
         const zenFill = document.getElementById('zenFill'); 
         const scoreEl = document.getElementById('score'); 
         const bestScoreEl = document.getElementById('bestScore'); 
@@ -127,7 +128,7 @@
         const flash = document.getElementById('flash'); 
         const btnMusic = document.getElementById('btnMusic');
         
-        // ===== AUDIO (Placeholder functions - Assumes assets are linked) ===== 
+        // ===== AUDIO ===== 
         const MUSIC = { base: 'assets/musica_base.mp3', boss: 'assets/musica_boss.mp3', bonus: 'assets/musica_bonus.mp3' }; 
         const SFX = { bowl: 'assets/sonido_bowl_limpio.mp3', banana: 'assets/sonido_recolectar_platano.mp3', inhale: 'assets/sonido_inhalar.mp3', chocar: 'assets/sonido_chocar.mp3', woosh: 'assets/woosh.mp3', gong: 'assets/gong.mp3', levelComplete: 'assets/level_complete.mp3' }; 
         
@@ -155,14 +156,14 @@
                 audio.play().catch(()=>{}); 
             } 
         } 
-        function stopAllSfx(){} // Simplification 
+        function stopAllSfx(){}
         
         btnMusic.addEventListener('click', ()=>{ 
             musicEnabled = !musicEnabled; 
             btnMusic.textContent = musicEnabled ? '🎵' : '🔇'; 
             if(musicEnabled){ 
                 if(currentMusic) currentMusic.play().catch(()=>{}); 
-                else if(!gameOver && started) playMusic(MUSIC.base);
+                else if(!gameOver && started && !currentMusic) playMusic(MUSIC.base);
             } else { 
                 stopMusic(); 
             } 
@@ -175,7 +176,8 @@
         const obstacles = [];
         const bananas = [];
         const pulses = []; 
-        const particles = []; // For effects 
+        const particles = [];
+        const clouds = []; // NEW: Array de nubes
 
         // ===== IMAGES (Simplified) ===== 
         const IMG = { 
@@ -184,14 +186,13 @@
             boss: {}, boss2: {}, boss3: {}, bonus: {} 
         }; 
         
-        // Placeholder for loading logic - IMPORTANT: Actual asset paths must be correct 
         function loadImage(src){ 
             return new Promise((resolve, reject)=>{ 
                 const img = new Image(); 
                 img.onload = ()=>resolve(img); 
                 img.onerror = ()=> { 
                     console.warn("Error al cargar imagen: "+src); 
-                    resolve(null); // Resolve to null if fails 
+                    resolve(null);
                 };
                 img.src = src; 
             }); 
@@ -199,11 +200,11 @@
         
         async function loadAll(){ 
             // Cargar erizo 
-            IMG.erizo.calmado = await loadImage('assets/erizo/erizo_calmado.png'); 
-            IMG.erizo.inhalando = await loadImage('assets/erizo/erizo_inhalando.png'); 
-            IMG.erizo.gritando = await loadImage('assets/erizo/erizo_gritando.png'); 
-            IMG.erizo.parpadeo = await loadImage('assets/erizo/erizo_parpadeo.png'); 
-            IMG.erizo.meditando = await loadImage('assets/erizo/erizo_meditando.png'); // Zen state
+            IMG.erizo.calmado = await loadImage('assets/erizo_calmado.png'); // Asumo que las imágenes están en la raíz de assets/erizo
+            IMG.erizo.inhalando = await loadImage('assets/erizo_inhalando.png'); 
+            IMG.erizo.gritando = await loadImage('assets/erizo_gritando.png'); 
+            IMG.erizo.parpadeo = await loadImage('assets/erizo_parpadeo.png'); 
+            IMG.erizo.meditando = await loadImage('assets/erizo_meditando.png'); 
             
             // Fondos 
             IMG.fondos.calc = await loadImage('assets/fondo_calc.png'); 
@@ -224,15 +225,16 @@
             IMG.boss.cartel = await loadImage('assets/boss/cuidado_espuma.png'); 
             IMG.boss.img = await loadImage('assets/boss/pasta_feroz.png'); 
             IMG.boss.proj = await loadImage('assets/boss/espuma_boss.png'); 
-            IMG.boss.num = []; for(let i=1;i<=10;i++) IMG.boss.num.push(await loadImage(`assets/boss/${i}.png`)); // Contador
+            IMG.boss.num = []; for(let i=1;i<=10;i++) IMG.boss.num.push(await loadImage(`assets/boss/${i}.png`)); 
             
-            // Boss 2/3 and Bonus (Load all necessary assets here)
-            // ... (The list of assets is extensive, keeping it concise here but assuming full implementation)
-
             // Bonus
             IMG.bonus.cartel = await loadImage('assets/bonus/coge_todo.png');
             IMG.bonus.patito1 = await loadImage('assets/patito1.png');
             IMG.bonus.patito2 = await loadImage('assets/patito2.png');
+            
+            // Carga opcional de Boss 2/3 (para que el código no falle si no existen)
+            IMG.boss2.cartel = await loadImage('assets/boss2/cartel_boss2.png');
+            IMG.boss3.cartel = await loadImage('assets/boss3/cartel_boss3.png');
         } 
         
         // ===== GAME STATE ===== 
@@ -241,11 +243,10 @@
         let inBossPhase = false, inBonusPhase = false, bossActive = false, bonusActive = false; 
         let bossCountdown = 0, bossStageIndex = 1;
         
-        // Progreso del juego (no se borran al morir)
         const bossesDone = new Set(), bonusDone = new Set(); 
         let gameComplete = false; 
         let lastFrame = performance.now();
-        let shakeDuration = 0; // NEW: Screen Shake timer
+        let shakeDuration = 0;
 
         function updateBestDisplays(){ 
             bestScoreEl.textContent = "Mejor: "+POINTS.best; 
@@ -253,12 +254,10 @@
         } 
         updateBestDisplays(); 
 
-        // NEW: Solo resetea el estado volátil (puntos, velocidad, etc.)
         function resetVolatileState(){
             POINTS.total = 0;
             CHARGE.value = 0; CHARGE.cooldown = 0;
             
-            // MODIFICADO: Reset de velocidad y spawn a los valores base
             SPEED.scroll = BASE_SPEED_SCROLL; 
             SPAWN.interval = BASE_SPAWN_INTERVAL; 
             SPAWN.timer = 0; SPAWN.diffTimer = 0;
@@ -268,7 +267,6 @@
             player.vy = 0; player.state='calmado'; player.mareo = 0;
             panel.classList.remove('show'); hint.style.display = '';
             
-            // Mantener el progreso y el fondo actual si no es un reset total
             gameOver = false;
             inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
             bossCountdown = 0; bossTimer = 0; bonusTimer = 0;
@@ -276,14 +274,12 @@
             stopMusic();
             if(musicEnabled) playMusic(MUSIC.base);
             btnRestart.textContent = 'Reintentar';
-            if (gameComplete) panelMsg.innerHTML = "Has muerto... ¡Pero ya habías alcanzado el Zen! Vuelve a empezar."; // NEW: Adjust message if died right after Zen completion
-            gameComplete = false; // NEW: Reset immediately if used for an actual restart
+            if (gameComplete) panelMsg.innerHTML = "Has muerto... ¡Pero ya habías alcanzado el Zen! Vuelve a empezar."; 
+            gameComplete = false;
         }
 
-        // MODIFICADO: Reseteo total (para iniciar el juego desde el menú)
         function resetAll(){ 
             resetVolatileState();
-            // Pasos adicionales para un reset completo
             bossesDone.clear();
             bonusDone.clear();
             bgStage = 0; 
@@ -292,9 +288,8 @@
             bossStageIndex = 1;
         }
 
-        // MODIFICADO: Lógica de reinicio inteligente
         btnRestart.addEventListener('click', ()=>{
-            if(POINTS.total > POINTS.best){ // Guardar el récord antes de resetear
+            if(POINTS.total > POINTS.best){ 
                 POINTS.best = POINTS.total;
                 localStorage.setItem('bestScore', POINTS.best);
                 updateBestDisplays();
@@ -302,37 +297,88 @@
 
             const lastBossStage = bossStageIndex; 
             const wasInBoss = inBossPhase;
-            const wasGameComplete = gameComplete; // NEW: Flag for Zen screen
+            const wasGameComplete = gameComplete;
 
-            resetVolatileState(); // Reset volátil (puntos a 0, velocidad a base)
+            resetVolatileState(); 
             
-            if(wasGameComplete){ // NEW: Si venía de la pantalla Zen, reset total y al menú (o empezar)
-                 resetAll(); // Reset total para el Zen
+            if(wasGameComplete){ 
+                 resetAll(); 
                  menuPanel.classList.add('show');
                  panel.classList.remove('show');
                  return;
             }
 
-            if(wasInBoss) { // Si murió en Boss, salta a ese Boss (con 0 puntos)
+            if(wasInBoss) { 
                 startBossPhase(lastBossStage, true);
             } else {
-                // Murió en Bonus/Normal: Se reanuda en fase normal con 0 puntos,
-                // pero el progreso (bossesDone) se mantiene, forzando a alcanzar
-                // la siguiente meta de puntos desde 0.
                 lastFrame = performance.now();
                 requestAnimationFrame(frame);
             }
         });
 
-        // ... (UTIL section remains unchanged) ...
-        function initClouds(){ /* ... */ } // Placeholder
-        function spawnObstacle(){ /* ... */ } // Placeholder
-        function spawnCollectable(){ /* ... */ } // Placeholder
-        function spawnBonusObject(){ /* ... */ } // Placeholder
+        // ===== UTILIDADES IMPLEMENTADAS ===== 
+        function dist2(x1, y1, x2, y2) {
+            const dx = x1 - x2;
+            const dy = y1 - y2;
+            return dx * dx + dy * dy;
+        }
 
-        // ===== BOSS CONTROL ===== 
+        function initClouds(){ 
+            clouds.length = 0;
+            for(let i=0; i<6; i++){
+                clouds.push({
+                    x: Math.random() * WORLD.w,
+                    y: Math.random() * (WORLD.h - GROUND_H - 100),
+                    imgRef: IMG.nubes[Math.floor(Math.random() * IMG.nubes.length)],
+                    scale: 0.5 + Math.random() * 0.5,
+                    vx: -(20 + Math.random() * 40)
+                });
+            }
+        } 
+        
+        // ===== SPAWNERS IMPLEMENTADOS =====
+        function spawnObstacle(kind = 'paraguas', radius = 30) {
+            if(kind === 'espuma') radius = 20 + Math.random() * 10;
+            else if (kind === 'helado') radius = 35;
+            
+            // Randomize height slightly
+            const y_offset = (kind === 'espuma') ? Math.random() * (WORLD.h - GROUND_H - 2 * radius) : 0;
+
+            obstacles.push({
+                x: WORLD.w + radius,
+                y: WORLD.h - GROUND_H - radius + y_offset,
+                r: radius,
+                vy: 0,
+                kind: kind,
+                imgRef: IMG.obstaculos[kind] || IMG.boss.proj
+            });
+        } 
+
+        function spawnCollectable(kind = 'banana', radius = 20) { 
+            const height = WORLD.h - GROUND_H - radius * 2 - Math.random() * 400; // Random height
+            const speed_mult = (kind === 'cuenco') ? 1.5 : 1;
+            
+            bananas.push({ 
+                x: WORLD.w + radius,
+                y: Math.max(height, 100), // Min y 100
+                r: radius,
+                kind: kind,
+                speedMult: speed_mult
+            });
+        } 
+
+        function spawnBonusObject() {
+            // Spawn patitos
+            spawnCollectable('patito', 25);
+        }
+        
+        // ===== BOSS/BONUS CONTROL Y TRANSICIONES IMPLEMENTADAS =====
+        let bossTimer = 0;
+        let bonusTimer = 0;
+        let bossSpawnTimer = 0;
+        
         function startBossPhase(stage=1, restart=false){ 
-            if(stage > 3) stage = 3; // Max 3 bosses
+            if(stage > 3) stage = 3;
             inBossPhase = true;
             inBonusPhase = false; 
             bossActive = false;
@@ -340,19 +386,21 @@
             bossCountdown = BOSS_DURATION; 
             bossStageIndex = stage;
             
-            // NEW: Reset velocidad/spawn a base para una fase Boss fresca
             SPEED.scroll = BASE_SPEED_SCROLL;
             SPAWN.interval = BASE_SPAWN_INTERVAL;
+            obstacles.length = 0; bananas.length = 0; pulses.length = 0;
 
-            // ... (código de transición de boss)
             if(!restart) fleetingFlash(); 
+            
             // set background 
-            currentBg = IMG.fondos.desierto || currentBg; // simplified bg logic 
-            // music 
+            if(stage === 1) currentBg = IMG.fondos.desierto || currentBg; 
+            else if(stage === 2) currentBg = IMG.fondos.helado || currentBg; 
+            else currentBg = IMG.fondos.calc || currentBg; // Default
+            
             if(musicEnabled) playMusic(MUSIC.boss);
-            // Mostrar cartel 
-            setTimeout(()=>{ bossActive=true; }, 2000); 
-            // ...
+            
+            // Show cartel for 2 seconds
+            setTimeout(()=>{ bossActive=true; bossSpawnTimer=0; }, 2000); 
         } 
 
         function startBonusPhase(){ 
@@ -361,22 +409,21 @@
             bonusActive = false; 
             bonusTimer = 0; 
             
-            // NEW: Reset velocidad/spawn a base para una fase Bonus fresca
             SPEED.scroll = BASE_SPEED_SCROLL;
             SPAWN.interval = BASE_SPAWN_INTERVAL;
+            obstacles.length = 0; bananas.length = 0; pulses.length = 0;
 
-            // ... (código de transición de bonus)
             fleetingFlash(); 
             currentBg = IMG.fondos.bonus || currentBg; 
+            
             if(musicEnabled) playMusic(MUSIC.bonus);
-            // Mostrar cartel
+            
+            // Show cartel for 2 seconds
             setTimeout(()=>{ bonusActive=true; }, 2000); 
-            // ...
         } 
         
-        // NEW: Screen Shake function
         function doShake(duration = 0.25){
-            if(shakeDuration > 0) return; // Prevent stacking
+            if(shakeDuration > 0) return;
             shakeDuration = duration;
             wrap.classList.add('shake');
         }
@@ -386,12 +433,12 @@
             setTimeout(()=> { flash.style.transition = 'opacity 0.2s'; flash.style.opacity = 0; }, 50);
             setTimeout(()=> { flash.style.transition = ''; }, 250);
         }
-
-        // ===== UPDATE ===== 
+        
+        // ===== UPDATE IMPLEMENTADA ===== 
         function update(dt){ 
             if(!started || gameOver) return; 
 
-            // NEW: Handle screen shake decay
+            // Handle screen shake decay
             if(shakeDuration > 0) {
                 shakeDuration -= dt;
                 if(shakeDuration <= 0) {
@@ -399,9 +446,78 @@
                 }
             }
 
-            // ... (Movimiento del jugador y scroll remains unchanged) ...
+            // --- FÍSICAS DEL JUGADOR ---
+            player.vy += PHYSICS.gravity * dt;
+            if(isDown && CHARGE.cooldown <= 0){
+                player.state = 'inhalando';
+                player.vy = PHYSICS.inhaleForce * dt;
+                CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt);
+                hint.style.display = 'none';
+            } else if (justReleased) {
+                player.state = 'gritando';
+                playSfx('woosh');
+                CHARGE.cooldown = CHARGE.cooldownBase;
+                justReleased = false;
 
-            // MODIFICADO: Triggers usan nuevos umbrales
+                // Generar onda de grito
+                const pulse_r = PULSE.base + (PULSE.max - PULSE.base) * (CHARGE.value / CHARGE.max);
+                pulses.push({ x: player.x, y: player.y, r: 0, maxR: pulse_r, life: PULSE.life });
+                CHARGE.value = 0;
+            } else {
+                player.state = 'calmado';
+            }
+            CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
+
+            player.y += player.vy * dt;
+            player.y = Math.max(player.r, Math.min(WORLD.h - GROUND_H - player.r, player.y));
+            player.vy = Math.min(PHYSICS.maxVy, player.vy);
+
+            // --- SCROLL Y DIFICULTAD ---
+            if(!inBossPhase && !inBonusPhase){
+                SPAWN.diffTimer += dt;
+                SPEED.scroll = Math.min(SPEED.max, BASE_SPEED_SCROLL + SPAWN.diffTimer * SPEED.inc);
+                SPAWN.interval = Math.max(SPAWN.min, BASE_SPAWN_INTERVAL - SPAWN.diffTimer * 0.02);
+            }
+            
+            // --- GESTIÓN DE OBJETOS ---
+            const scroll_dx = SPEED.scroll * dt;
+            
+            // Mover y limpiar nubes
+            for(let i=clouds.length-1; i>=0; i--){
+                clouds[i].x += clouds[i].vx * dt;
+                if(clouds[i].x + 100 < 0) clouds.splice(i, 1);
+            }
+            
+            // Mover y limpiar obstáculos
+            for(let i=obstacles.length-1; i>=0; i--){
+                obstacles[i].x -= scroll_dx;
+                if(obstacles[i].x + obstacles[i].r < 0) obstacles.splice(i, 1);
+            }
+            
+            // Mover y limpiar coleccionables
+            for(let i=bananas.length-1; i>=0; i--){
+                bananas[i].x -= scroll_dx * (bananas[i].speedMult || 1);
+                if(bananas[i].x + bananas[i].r < 0) bananas.splice(i, 1);
+            }
+            
+            // Mover y limpiar pulsos de grito
+            for(let i=pulses.length-1; i>=0; i--){
+                pulses[i].r += (pulses[i].maxR / pulses[i].life) * dt;
+                pulses[i].life -= dt;
+                if(pulses[i].life <= 0) pulses.splice(i, 1);
+            }
+            
+            // --- SPAWN NORMAL ---
+            if(!inBossPhase && !inBonusPhase){
+                SPAWN.timer += dt;
+                if(SPAWN.timer >= SPAWN.interval){
+                    SPAWN.timer = 0;
+                    if(Math.random() < 0.6) spawnObstacle(Math.random() < 0.5 ? 'paraguas' : 'helado');
+                    if(Math.random() < 0.4) spawnCollectable(Math.random() < 0.1 ? 'cuenco' : 'banana');
+                }
+            }
+
+            // --- TRIGGERS (Boss/Bonus) ---
             if(!inBossPhase && !inBonusPhase){ 
                 if(POINTS.total >= BOSS_SCORE_1 && !bossesDone.has(1)){ 
                     bossesDone.add(1);
@@ -423,16 +539,29 @@
                     startBonusPhase(); 
                 }
             } 
+            
+            // --- COLISIONES ---
+            
+            // 1. Grito vs Obstáculos
+            for(let p=pulses.length-1; p>=0; p--){
+                const pulse = pulses[p];
+                for(let i=obstacles.length-1; i>=0; i--){
+                    const o = obstacles[i];
+                    if(dist2(o.x, o.y, pulse.x, pulse.y) <= (o.r + pulse.r)*(o.r + pulse.r)){
+                        obstacles.splice(i, 1); // Obstáculo eliminado
+                        POINTS.total += 1;
+                        playSfx('gong', 0.5);
+                    }
+                }
+            }
 
-            // ... (Colisiones y game over)
+            // 2. Jugador vs Obstáculos (Game Over)
             for(let i=obstacles.length-1;i>=0;i--){ 
                 const o = obstacles[i];
                 if(dist2(o.x,o.y,player.x,player.y) <= (o.r + player.r)*(o.r + player.r)){ 
-                    // Colisión = Game Over
                     playSfx('chocar', 0.5);
-                    doShake(); // NEW: Screen Shake on collision
+                    doShake(); 
                     
-                    // Asegurar que el récord se guarda antes de detener
                     if(POINTS.total > POINTS.best){
                         POINTS.best = POINTS.total;
                         localStorage.setItem('bestScore', POINTS.best);
@@ -448,28 +577,63 @@
                 } 
             } 
             
-            // ... (Recolección de coleccionables remains unchanged) ...
+            // 3. Jugador vs Coleccionables (Puntos)
+            for(let i=bananas.length-1;i>=0;i--){ 
+                const b = bananas[i];
+                if(dist2(b.x,b.y,player.x,player.y) <= (b.r + player.r)*(b.r + player.r)){ 
+                    if(b.kind === 'cuenco') {
+                        POINTS.total += 5;
+                        playSfx('bowl', 0.5);
+                    } else {
+                        POINTS.total += 1;
+                        playSfx('banana', 0.5);
+                    }
+                    bananas.splice(i, 1);
+                } 
+            } 
 
-            // MODIFICADO: BONUS finaliza y comprueba el fin del juego
+            // --- GESTIÓN DE FASES ESPECIALES ---
+            
+            // BOSS phase logic (Boss 1 simple: only spawns projectiles)
+            if(inBossPhase && bossActive){
+                bossTimer += dt;
+                bossSpawnTimer += dt;
+                
+                // Boss spawns (example logic: faster than normal spawn)
+                if(bossSpawnTimer > 0.3){
+                    spawnObstacle('espuma');
+                    bossSpawnTimer = 0;
+                }
+                
+                if(bossTimer >= BOSS_DURATION){
+                    bossActive = false;
+                    inBossPhase = false;
+                    fleetingFlash();
+                    playSfx('level_complete', 0.7);
+                    setTimeout(()=>{ currentBg = IMG.fondos.calc || currentBg; if(musicEnabled) playMusic(MUSIC.base); }, 350);
+                }
+            }
+
+            // BONUS phase logic
             if(inBonusPhase && bonusActive){ 
                 bonusTimer += dt; 
-                if(Math.random() < 0.08) spawnBonusObject();
+                // Spawn patitos
+                if(Math.random() < 0.08) spawnBonusObject(); 
+                
                 if(bonusTimer >= BOSS_DURATION){ 
                     bonusActive = false; 
                     inBonusPhase = false; 
                     fleetingFlash(); 
                     playSfx('level_complete', 0.7);
 
-                    // NEW: Comprobación de finalización del juego (Bonus 3 completado)
                     if(bonusDone.has(3)){ 
                         gameComplete = true;
                         stopMusic(); 
                         
-                        // Mensaje final (usa el mejor récord)
                         panelMsg.innerHTML = `¡Has alcanzado el vacío Zen!🧘‍♀️<br>Mejor puntuación: **${POINTS.best}**`;
                         btnRestart.textContent = 'Volver al inicio'; 
                         panel.classList.add('show');
-                        player.state = 'meditando'; // Set estado final
+                        player.state = 'meditando'; 
                         cancelAnimationFrame(loopId); 
                         return;
                     }
@@ -477,9 +641,13 @@
                     setTimeout(()=>{ currentBg = IMG.fondos.calc || currentBg; if(musicEnabled) playMusic(MUSIC.base); }, 350);
                 } 
             } 
+            
+            // --- HUD ---
+            zenFill.style.width = CHARGE.value + '%';
+            scoreEl.textContent = "Puntos: " + POINTS.total;
         } 
 
-        // ===== DRAW ===== 
+        // ===== DRAW IMPLEMENTADA ===== 
         function draw(){ 
             ctx.clearRect(0,0,WORLD.w,WORLD.h); 
             
@@ -491,22 +659,27 @@
             if(gameOver || gameComplete){ 
                 ctx.fillStyle = 'rgba(0,0,0,0.15)'; 
                 ctx.fillRect(0,0,WORLD.w,WORLD.h);
-                // Si ha terminado y estamos en el modo Zen, no salimos para dibujar al erizo meditando
                 if (gameOver && !gameComplete) return; 
             } 
 
-            // ... (drawing clouds remains unchanged) ...
+            // clouds layered 
+            for(const c of clouds){
+                if(c.imgRef){
+                    const w = c.imgRef.width * c.scale;
+                    const h = c.imgRef.height * c.scale;
+                    ctx.drawImage(c.imgRef, c.x - w/2, c.y - h/2, w, h);
+                }
+            }
 
             // bananas / patitos / cuencos 
             for(const b of bananas){ 
-                // NEW: Aura Zen para Coleccionables
-                ctx.strokeStyle = '#6ee7b7'; // Color Zen
+                // Aura Zen para Coleccionables
+                ctx.strokeStyle = '#6ee7b7'; 
                 ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2); 
                 ctx.stroke();
 
-                // ... (drawing the image remains unchanged) ...
                 if(b.kind === 'cuenco' && IMG.cuenco) ctx.drawImage(IMG.cuenco, b.x - b.r, b.y - b.r, b.r*2, b.r*2);
                 else if(b.kind === 'patito' && IMG.bonus.patito1) ctx.drawImage(IMG.bonus.patito1, b.x - b.r, b.y - b.r, b.r*2, b.r*2);
                 else if(IMG.banana) ctx.drawImage(IMG.banana, b.x - b.r, b.y - b.r, b.r*2, b.r*2); 
@@ -514,72 +687,26 @@
 
             // obstacles & espumas 
             for(const o of obstacles){ 
-                // NEW: Aura Roja para Obstáculos (Daño)
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; // Rojo con transparencia
+                // Aura Roja para Obstáculos (Daño)
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; 
                 ctx.beginPath();
                 ctx.arc(o.x, o.y, o.r + 6, 0, Math.PI * 2); 
                 ctx.fill();
                 
-                // ... (drawing the image remains unchanged) ...
                 if(o.kind === 'espuma' && IMG.boss.proj) ctx.drawImage(IMG.boss.proj, o.x - o.r, o.y - o.r, o.r*2, o.r*2);
                 else { 
                     const img = IMG.obstaculos[o.kind] || null; 
                     if(img) ctx.drawImage(img, o.x - o.r, o.y - o.r, o.r*2, o.r*2);
                 } 
             } 
-
-            // ... (pulses, ground, particles remains unchanged) ...
-
-            // player sprite selection 
-            let erizoImg = IMG.erizo.calmado; 
-            if(player.state === 'inhalando') erizoImg = IMG.erizo.inhalando;
-            else if(player.state === 'gritando') erizoImg = IMG.erizo.gritando; 
-            else if(player.state === 'meditando' && IMG.erizo.meditando) erizoImg = IMG.erizo.meditando; // NEW: Estado Zen
-            else if(Math.random() < 0.002 && IMG.erizo.parpadeo) erizoImg = IMG.erizo.parpadeo;
             
-            if(erizoImg) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2); 
-            // ... (rest of draw remains unchanged) ...
-        } 
-
-        // ... (FRAME LOOP and COUNTDOWN sections remain unchanged) ...
-        function frame(now){ /* ... */ } // Placeholder
-        function showMainCountdown(callback){ /* ... */ } // Placeholder
-
-        // ===== INIT / START ===== 
-        loadAll().then(()=>{ 
-            currentBg = IMG.fondos.calc || null; 
-            initClouds(); 
-            updateBestDisplays(); 
-            
-            setTimeout(()=>{ loader.style.display = 'none'; }, 400); 
-            
-            btnStart.addEventListener('click', ()=>{ 
-                menuPanel.classList.remove('show'); 
-                showMainCountdown(()=>{ 
-                    resetAll(); 
-                    lastFrame = performance.now(); 
-                    if(musicEnabled) playMusic(MUSIC.base); 
-                    requestAnimationFrame(frame); 
-                }); 
-            }); 
-            
-            // NEW: Test mode keys (J/K/L/B)
-            if (TEST_MODE) {
-                document.addEventListener('keydown', (e)=>{
-                    if(!started || gameOver) return;
-                    if(e.key.toLowerCase() === 'j') startBossPhase(1);
-                    if(e.key.toLowerCase() === 'k') startBossPhase(2);
-                    if(e.key.toLowerCase() === 'l') startBossPhase(3);
-                    if(e.key.toLowerCase() === 'b') startBonusPhase();
-                });
-            }
-        }); 
-        
-        // Control de inhalación/grito (touch/pointer events)
-        canvas.addEventListener('pointerdown', ()=>{ isDown = true; }); 
-        canvas.addEventListener('pointerup', ()=>{ isDown = false; justReleased = true; }); 
-
-    })();
+            // Pulses
+            for(const p of pulses){
+                ctx.strokeStyle = `rgba(134, 239, 172, ${p.life / PULSE.life})`; // Greenish pulse fading
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.stroke
     </script>
 </body>
 </html>
