@@ -253,7 +253,7 @@
         window.addEventListener('resize', fit); fit();
         function withinCanvas(clientX, clientY){ 
             const rect = canvas.getBoundingClientRect();
-            return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+            return clientX >= rect.left && clientY >= rect.top && clientX <= rect.right && clientY <= rect.bottom;
         } 
         function dist2(x1, y1, x2, y2) { const dx = x1 - x2; const dy = y1 - y2; return dx * dx + dy * dy; }
 
@@ -326,7 +326,7 @@
             
             if(!restart) fleetingFlash(); 
             
-            // Cambiar fondo según la fase (simplificado ya que solo tenemos 3 fondos)
+            // Cambiar fondo según la fase 
             if(stage === 1) currentBg = IMG.fondos.desierto || currentBg; 
             else if(stage === 2) currentBg = IMG.fondos.helado || currentBg; 
             else currentBg = IMG.fondos.calc || currentBg; 
@@ -362,7 +362,7 @@
             // Limpiar los anteriores
             for(let i=1; i<=3; i++) bonusDone.delete(i);
             
-            // Si testeamos el Bonus 3, necesitamos que los anteriores se cuenten como hechos
+            // Si testeamos el Bonus 3, necesitamos que los anteriores se cuenten como hechos para activar el final Zen
             for(let i=1; i<=stage; i++) bonusDone.add(i);
             
             inBossPhase = false; inBonusPhase = false;
@@ -543,9 +543,18 @@
                 ctx.strokeStyle = `rgba(134, 239, 172, ${p.life / PULSE.life})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
             }
 
-            // Draw Ground (Simple fill)
-            ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, WORLD.h - GROUND_H, WORLD.w, GROUND_H);
-
+            // Draw Ground (Image)
+            const groundH = WORLD.h - GROUND_H;
+            ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
+            if(IMG.suelo){
+                for(const s of sueloScroll){
+                     ctx.drawImage(IMG.suelo, s.x, groundH, WORLD.w, GROUND_H);
+                }
+            } else {
+                 // Dibuja el color si no hay imagen
+                 ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
+            }
+            
             // Draw Player (Erizo)
             let erizoImg = IMG.erizo.calmado; 
             if(player.state === 'inhalando') erizoImg = IMG.erizo.inhalando;
@@ -558,14 +567,14 @@
             if(!bossActive && inBossPhase && IMG.bossCartels[1]){ ctx.drawImage(IMG.bossCartels[1], WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); }
             if(inBossPhase && bossActive){
                 const num = Math.ceil(BOSS_DURATION - bossTimer);
-                // Si tienes imágenes numéricas para el countdown del boss, se dibujarían aquí
-                // if(num >= 1 && num <= 10 && IMG.bossNumbers[bossStageIndex][num-1]){ ... }
+                // Aquí se dibujarían los números si tienes assets específicos
             }
         } 
         
         // ===== GAME LOOP: FRAME =====
         function frame(now) {
             if (gameOver || gameComplete) return;
+            // Limitador de frame rate para evitar saltos grandes de dt (Delta Time)
             const dt = Math.min((now - lastFrame) / 1000, 1/30); 
             lastFrame = now;
 
@@ -587,13 +596,43 @@
             }); 
         } 
 
+        // Carga de Assets (asegúrate de que todos los assets están en la carpeta 'assets/')
+        async function loadAll(){ 
+            // 1. Loader: Elegir imagen de loader al azar
+            const randomLoader = ASSETS.loader[Math.floor(Math.random() * ASSETS.loader.length)];
+            loaderImg.src = randomLoader;
+            
+            // Carga de imágenes
+            IMG.fondos.calc = await loadImage(ASSETS.fondos.calc); IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto); IMG.fondos.helado = await loadImage(ASSETS.fondos.helado);
+            IMG.erizo.calmado = await loadImage(ASSETS.erizo.calmado); IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando); IMG.erizo.gritando = await loadImage(ASSETS.erizo.gritando);
+            IMG.erizo.meditando = await loadImage(ASSETS.erizo.meditando); IMG.erizo.parpadeo = await loadImage(ASSETS.erizo.parpadeo);
+            IMG.barraInhalacion = await loadImage(ASSETS.barraInhalacion);
+            
+            // Coleccionables/Obstáculos/Nubes
+            for(const s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s)); 
+            IMG.banana = await loadImage(ASSETS.banana); IMG.cuenco = await loadImage(ASSETS.cuenco);
+            for(const s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
+            // Suelo (asumiendo que tienes un asset para el suelo)
+            IMG.suelo = await loadImage('assets/suelo.png'); 
+
+            // Contadores
+            for(const s of ASSETS.contador) IMG.contador.push(await loadImage(s)); IMG.contadorGo = await loadImage(ASSETS.contadorGo); 
+            
+            // Bosses/Bonus 
+            IMG.bossCartels[1] = await loadImage(ASSETS.boss1.cartel); for(const s of ASSETS.boss1.espumas) IMG.bossEspumas[1].push(await loadImage(s));
+            IMG.bonusBg = await loadImage(ASSETS.bonus.bg); for(const s of ASSETS.bonusPatitos) IMG.bonusPatitos.push(await loadImage(s));
+            
+            // Carga de Audio (como objetos Audio)
+            for(const key in MUSIC_PATHS){ MUSIC[key] = new Audio(MUSIC_PATHS[key]); }
+
+            // 1. Ocultar loader
+            setTimeout(()=>{ loader.style.display = 'none'; }, 400); 
+        } 
+        
         await loadAll();
         currentBg = IMG.fondos.calc || null; 
         initClouds(); 
         updateBestDisplays(); 
-        
-        // 1. Ocultar loader
-        setTimeout(()=>{ loader.style.display = 'none'; }, 400); 
         
         // 2. Iniciar música de menú al cargar
         if(musicEnabled) playMusic(MUSIC.menu);
@@ -602,13 +641,40 @@
         btnStart.addEventListener('click', ()=>{ 
             menuPanel.classList.remove('show'); 
             stopMusic(); 
+            // 3. Cuenta atrás sin números, solo imágenes grandes
             showMainCountdown(()=>{ 
                 resetAll(); 
+                started = true; // El juego empieza después del countdown
                 lastFrame = performance.now(); 
                 if(musicEnabled) playMusic(MUSIC.base); 
                 requestAnimationFrame(frame); 
             }); 
         }); 
+
+        // 3. COUNTDOWN (implementación)
+        const COUNTDOWN_IMAGES = ASSETS.contador.slice();
+        function showMainCountdown(onDone){ 
+            let pool = COUNTDOWN_IMAGES.slice(); 
+            const seq = []; 
+            for(let i=0;i<3;i++){ const idx = Math.floor(Math.random()*pool.length); seq.push(pool.splice(idx,1)[0]); } 
+            seq.push(ASSETS.contadorGo); 
+            countdownEl.classList.add('show');
+            
+            let i = 0; 
+            function next(){ 
+                if(i < seq.length){ 
+                    countNum.innerHTML = `<img src="${seq[i]}" alt="Contador ${i+1}">`; 
+                    playSfx('gong', 0.65); 
+                    i++; 
+                    setTimeout(next, 900);
+                } else { 
+                    countdownEl.classList.remove('show'); 
+                    countNum.innerHTML = ''; 
+                    if(typeof onDone === 'function') onDone(); 
+                } 
+            } 
+            next();
+        } 
 
         // Pointer/Touch Events
         canvas.addEventListener('pointerdown', e=>{ 
