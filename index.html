@@ -135,7 +135,8 @@
         const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
         const PULSE = { base: 120, max: 380, life: 0.25 };
         const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
-        const PHYSICS = { gravity: 600, inhaleForce: -1400, maxVy: 900 }; 
+        // ✅ FIX 1: Valores ajustados para mejor sensación arcade (gravedad más alta, impulso más fuerte)
+        const PHYSICS = { gravity: 1800, inhaleForce: -2500, maxVy: 900 }; 
         const GROUND_H = 180;
         const BOSS_DURATION = 10; 
         
@@ -169,7 +170,8 @@
         const flash = document.getElementById('flash'); 
 
         // ===== AUDIO ===== 
-        const SFX = { bowl: 'assets/sonido_bowl_limpio.mp3', banana: 'assets/sonido_recolectar_platano.mp3', inhale: 'assets/sonido_inhalar.mp3', chocar: 'assets/sonido_chocar.mp3', woosh: 'assets/woosh.mp3', gong: 'assets/gong.mp3', level_complete: 'assets/level_complete.mp3' };
+        // ✅ FIX 2: Cambiado 'woosh' por 'grito_zen.mp3'. Asegúrate de que el archivo existe en 'assets/'
+        const SFX = { bowl: 'assets/sonido_bowl_limpio.mp3', banana: 'assets/sonido_recolectar_platano.mp3', inhale: 'assets/sonido_inhalar.mp3', chocar: 'assets/sonido_chocar.mp3', woosh: 'assets/grito_zen.mp3', gong: 'assets/gong.mp3', level_complete: 'assets/level_complete.mp3' };
         const MUSIC_PATHS = { menu: 'assets/musica_pantalla_principal.mp3', base: 'assets/musica_base.mp3', bonus: 'assets/musica_bonus.mp3', boss: 'assets/musica_boss.mp3' };
         const MUSIC = {};
         let currentMusic = null;
@@ -205,10 +207,12 @@
             } 
         }); 
 
-        // ===== ASSETS PATHS =====
+        // ===== ASSETS PATHS (Rutas de Erizo corregidas) =====
         const ASSETS = { 
             loader: ['assets/loader.png', 'assets/loader1.png', 'assets/loader2.png', 'assets/loader3.png'],
-            fondos: { calc: 'assets/fondo_calc.png', desierto: 'assets/fondo_desierto.png', helado: 'assets/fondo_helado.png', bonus: 'assets/bonus/fondo_bonus.png' }, 
+            // ✅ FIX 4: Añadido fondo específico para el tercer boss
+            fondos: { calc: 'assets/fondo_calc.png', desierto: 'assets/fondo_desierto.png', helado: 'assets/fondo_helado.png', zen_boss: 'assets/fondo_zen_boss.png', bonus: 'assets/bonus/fondo_bonus.png' }, 
+            // Las rutas cortas para el erizo causaban problemas, restauramos los nombres largos
             erizo: { calmado: 'assets/erizo_calmado.png', inhalando: 'assets/erizo_inhalando.png', gritando: 'assets/erizo_gritando.png', parpadeo: 'assets/erizo_parpadeo.png', meditando: 'assets/erizo_meditando.png' }, 
             obstaculos: ['assets/paraguas.png','assets/helado_meditando.png'], 
             banana: 'assets/platano_puntos.png', cuenco: 'assets/cuenco_tibetano.png', 
@@ -220,7 +224,7 @@
             bonusPatitos: ['assets/patito1.png','assets/patito2.png'] 
         };
 
-        // ===== ENTITIES & GAME STATE ===== 
+        // ===== ENTITIES & GAME STATE (Declaración de bossCountdown) ===== 
         const player = { x: 100, y: WORLD.h - GROUND_H - 50, r: 40, state: 'calmado', vy:0, mareo:0 };
         const sueloScroll = [{ x:0 }, { x: WORLD.w }];
         const obstacles = [], bananas = [], pulses = [], particles = []; const CLOUD = { list: [] };
@@ -265,7 +269,6 @@
         } 
         updateBestDisplays(); 
 
-        // 🟢 FIX: ResetVolatileState solo para la lógica, no para iniciar música base.
         function resetVolatileState(){
             POINTS.total = 0;
             CHARGE.value = 0; CHARGE.cooldown = 0;
@@ -281,11 +284,10 @@
             
             gameOver = false;
             inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
-            // FIX DEL ERROR: bossCountdown ya no se usa, por lo que se elimina la referencia
             bossTimer = 0; bonusTimer = 0; 
 
             stopAllSfx();
-            stopMusic(); // Solo detiene, no inicia la base
+            stopMusic(); 
             
             btnRestart.textContent = 'Reintentar';
             if (gameComplete) panelMsg.innerHTML = "Has muerto... ¡Pero ya habías alcanzado el Zen! Vuelve a empezar."; 
@@ -325,17 +327,17 @@
         function startBossPhase(stage=1, restart=false){ 
             if(stage > 3) stage = 3; 
             inBossPhase = true; inBonusPhase = false; bossActive = false; 
-            bossTimer = 0; // bossCountdown era innecesario aquí
+            bossTimer = 0;
             bossStageIndex = stage; 
             SPEED.scroll = BASE_SPEED_SCROLL; SPAWN.interval = BASE_SPAWN_INTERVAL; 
             obstacles.length = 0; bananas.length = 0; pulses.length = 0; 
             
             if(!restart) fleetingFlash(); 
             
-            // Cambiar fondo según la fase 
+            // ✅ FIX 4: Cambiar fondo según la fase. Usa 'zen_boss' para el boss 3.
             if(stage === 1) currentBg = IMG.fondos.desierto || currentBg; 
             else if(stage === 2) currentBg = IMG.fondos.helado || currentBg; 
-            else currentBg = IMG.fondos.calc || currentBg; 
+            else currentBg = IMG.fondos.zen_boss || currentBg; 
             
             if(musicEnabled) playMusic(MUSIC.boss); 
             setTimeout(()=>{ bossActive=true; bossSpawnTimer=0; }, 2000); 
@@ -389,10 +391,10 @@
             if(shakeDuration > 0) { shakeDuration -= dt; if(shakeDuration <= 0) { wrap.classList.remove('shake'); } }
             
             // Player Physics
-            player.vy += PHYSICS.gravity * dt;
             if(isDown && CHARGE.cooldown <= 0){
                 player.state = 'inhalando'; 
-                player.vy = PHYSICS.inhaleForce * dt;
+                // ✅ FIX 1: Aplicamos fuerza neta positiva (anti-gravedad) para levantamiento rápido.
+                player.vy += (PHYSICS.inhaleForce - PHYSICS.gravity) * dt; 
                 CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
                 hint.style.display = 'none';
             } else if (justReleased) {
@@ -403,7 +405,11 @@
                 const pulse_r = PULSE.base + (PULSE.max - PULSE.base) * (CHARGE.value / CHARGE.max);
                 pulses.push({ x: player.x, y: player.y, r: 0, maxR: pulse_r, life: PULSE.life }); 
                 CHARGE.value = 0;
-            } else { player.state = 'calmado'; }
+            } else { 
+                player.state = 'calmado'; 
+                // ✅ FIX 1: Aplicamos gravedad normal si no está inhalando
+                player.vy += PHYSICS.gravity * dt; 
+            }
             
             CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
             player.y += player.vy * dt;
@@ -516,12 +522,11 @@
         function draw(){ 
             ctx.clearRect(0,0,WORLD.w,WORLD.h); 
             
-            // 🟢 FIX PANTALLA NEGRA: Dibuja fondo sólido si la imagen falla
-            // Draw Background
+            // Draw Background (con fallback a color)
             if(currentBg && currentBg.complete) {
                 ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
             } else {
-                ctx.fillStyle = '#1b1b1f'; // Color de fondo del canvas (CSS)
+                ctx.fillStyle = '#1b1b1f'; 
                 ctx.fillRect(0, 0, WORLD.w, WORLD.h);
             }
             
@@ -535,7 +540,11 @@
             
             // Draw Collectables (Bananas/Bowls/Patitos)
             for(const b of bananas){ 
-                ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2); ctx.stroke();
+                // ✅ FIX 3: Aura pulsante más chula para los puntuables
+                const pulseFactor = Math.sin(Date.now() / 300) * 1.5 + 4.5;
+                ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 3; ctx.beginPath(); 
+                ctx.arc(b.x, b.y, b.r + pulseFactor, 0, Math.PI * 2); ctx.stroke();
+                
                 let itemImg = IMG.banana;
                 if(b.kind === 'cuenco') itemImg = IMG.cuenco;
                 else if(b.kind === 'patito') itemImg = IMG.bonusPatitos[Math.floor(Date.now()/500)%IMG.bonusPatitos.length]; 
@@ -562,7 +571,6 @@
                      ctx.drawImage(IMG.suelo, s.x, groundH, WORLD.w, GROUND_H);
                 }
             } else {
-                 // Dibuja el color si la imagen del suelo falla (para que no sea negro)
                  ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
             }
             
@@ -573,18 +581,33 @@
             else if(player.state === 'meditando') erizoImg = IMG.erizo.meditando; 
             else if(Math.random() < 0.002 && IMG.erizo.parpadeo) erizoImg = IMG.erizo.parpadeo;
             
-            // Asegúrate de que la imagen del erizo esté cargada
             if(erizoImg && erizoImg.complete) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2); 
             
-            // Draw Boss/Bonus UI (Simplified)
-            if(!bossActive && inBossPhase && IMG.bossCartels[1] && IMG.bossCartels[1].complete){ ctx.drawImage(IMG.bossCartels[1], WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); }
+            // Draw Boss/Bonus UI 
+            if(inBossPhase){
+                const cartelImg = IMG.bossCartels[bossStageIndex] || IMG.bossCartels[1];
+                // ✅ FIX 4: Dibujar el cartel (cuando carga) o el Boss (cuando está activo)
+                if(!bossActive && cartelImg && cartelImg.complete){ 
+                    ctx.drawImage(cartelImg, WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); 
+                }
+                else if(bossActive) {
+                    const bossImg = IMG.bossImgs[bossStageIndex] || IMG.bossImgs[1]; 
+                    if(bossImg && bossImg.complete){
+                        const imgW = 200; 
+                        const imgH = 200;
+                        // Dibuja el boss quieto en el centro-derecha
+                        ctx.drawImage(bossImg, WORLD.w - imgW - 50, WORLD.h/2 - imgH/2, imgW, imgH);
+                    }
+                }
+            }
 
-            // 🌟 DEBUG VISUAL AÑADIDO: Muestra un mensaje si el bucle de dibujo está activo 🌟
+            // 🌟 DEBUG VISUAL: Muestra un mensaje si el bucle de dibujo está activo 🌟
             if(started && !gameOver){
                 ctx.fillStyle = '#6ee7b7';
                 ctx.font = '24px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText('Game Loop: ACTIVO (¡Si ves esto, el problema es la carga de imágenes!)', WORLD.w / 2, 50);
+                // Si ve este texto, el problema es la carga de las imágenes que faltan.
+                ctx.fillText('Game Loop: ACTIVO', WORLD.w / 2, 50);
             } 
             // 🌟 FIN DEBUG VISUAL 🌟
         } 
@@ -624,23 +647,26 @@
             loaderImg.src = randomLoader;
             
             // Carga de imágenes
-            IMG.fondos.calc = await loadImage(ASSETS.fondos.calc); IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto); IMG.fondos.helado = await loadImage(ASSETS.fondos.helado);
+            // ✅ FIX 4: Cargar nuevo fondo 'zen_boss'
+            IMG.fondos.calc = await loadImage(ASSETS.fondos.calc); IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto); IMG.fondos.helado = await loadImage(ASSETS.fondos.helado); IMG.fondos.zen_boss = await loadImage(ASSETS.fondos.zen_boss);
+            // Rutas de erizo corregidas:
             IMG.erizo.calmado = await loadImage(ASSETS.erizo.calmado); IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando); IMG.erizo.gritando = await loadImage(ASSETS.erizo.gritando);
             IMG.erizo.meditando = await loadImage(ASSETS.erizo.meditando); IMG.erizo.parpadeo = await loadImage(ASSETS.erizo.parpadeo);
+            
             IMG.barraInhalacion = await loadImage(ASSETS.barraInhalacion);
             
             // Coleccionables/Obstáculos/Nubes
             for(const s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s)); 
             IMG.banana = await loadImage(ASSETS.banana); IMG.cuenco = await loadImage(ASSETS.cuenco);
             for(const s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
-            // Suelo (asumiendo que tienes un asset para el suelo)
-            // 🟢 FIX DE RUTA POTENCIAL
             IMG.suelo = await loadImage('assets/suelo.png'); 
 
             // Contadores
             for(const s of ASSETS.contador) IMG.contador.push(await loadImage(s)); IMG.contadorGo = await loadImage(ASSETS.contadorGo); 
             
             // Bosses/Bonus 
+            // ✅ FIX 4: Cargar imagen del boss
+            IMG.bossImgs[1] = await loadImage(ASSETS.boss1.img);
             IMG.bossCartels[1] = await loadImage(ASSETS.boss1.cartel); for(const s of ASSETS.boss1.espumas) IMG.bossEspumas[1].push(await loadImage(s));
             IMG.bonusBg = await loadImage(ASSETS.bonus.bg); for(const s of ASSETS.bonusPatitos) IMG.bonusPatitos.push(await loadImage(s));
             
@@ -668,7 +694,7 @@
                 resetAll(); // resetAll ahora solo detiene la música (si hubiera)
                 started = true; 
                 lastFrame = performance.now(); 
-                if(musicEnabled) playMusic(MUSIC.base); // 🟢 FIX MÚSICA: Inicia música base solo aquí
+                if(musicEnabled) playMusic(MUSIC.base); 
                 requestAnimationFrame(frame); 
             }); 
         }); 
@@ -725,7 +751,7 @@
             }
 
             resetVolatileState(); 
-            if(musicEnabled) playMusic(MUSIC.base); // 🟢 FIX MÚSICA: Inicia música base al reiniciar
+            if(musicEnabled) playMusic(MUSIC.base); 
             lastFrame = performance.now();
             requestAnimationFrame(frame);
         });
