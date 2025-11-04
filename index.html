@@ -190,7 +190,9 @@
             currentMusic = track;
             try{ currentMusic.currentTime = 0; currentMusic.play().catch(()=>{}); currentMusic.loop = true; currentMusic.volume = 0.4; }catch(e){} 
         } 
-        function stopMusic(){ try{ if(currentMusic){ currentMusic.pause(); currentMusic.currentTime=0; } } catch(e){} } 
+        function stopMusic(){ 
+            try{ if(currentMusic){ currentMusic.pause(); currentMusic.currentTime=0; } } catch(e){} 
+        } 
         
         btnMusic.addEventListener('click', ()=>{ 
             musicEnabled = !musicEnabled; 
@@ -263,6 +265,7 @@
         } 
         updateBestDisplays(); 
 
+        // 🟢 FIX: ResetVolatileState solo para la lógica, no para iniciar música base.
         function resetVolatileState(){
             POINTS.total = 0;
             CHARGE.value = 0; CHARGE.cooldown = 0;
@@ -279,9 +282,10 @@
             gameOver = false;
             inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
             bossCountdown = 0; bossTimer = 0; bonusTimer = 0;
+            
             stopAllSfx();
-            stopMusic();
-            if(musicEnabled) playMusic(MUSIC.base);
+            stopMusic(); // Solo detiene, no inicia la base
+            
             btnRestart.textContent = 'Reintentar';
             if (gameComplete) panelMsg.innerHTML = "Has muerto... ¡Pero ya habías alcanzado el Zen! Vuelve a empezar."; 
             gameComplete = false;
@@ -297,7 +301,8 @@
         }
 
         // ===== GAME ENTITIES & SPAWNERS ===== 
-        const IMG = { fondos: {}, erizo: {}, obstaculos: [], banana: null, cuenco: null, nubes: [], contador: [], contadorGo: null, bossImgs: {}, bossCartels: {}, bossNumbers: { 1:[], 2:[], 3:[] }, bossEspumas: {1:[],2:[],3:[]}, bonusPatitos: [], bonusBg: null, barraInhalacion: null };
+        const IMG = { fondos: {}, erizo: {}, obstaculos: [], banana: null, cuenco: null, nubes: [], contador: [], contadorGo: null, bossImgs: {}, bossCartels: {}, bossNumbers: { 1:[], 2:[], 3:[] }, bossEspumas: {1:[],2:[],3:[]}, bonusPatitos: [], bonusBg: null, barraInhalacion: null, suelo: null };
+
         function initClouds(){ CLOUD.list.length = 0; for(let i=0; i<6; i++){ CLOUD.list.push({ x: Math.random() * WORLD.w, y: Math.random() * (WORLD.h - GROUND_H - 100), imgRef: IMG.nubes[Math.floor(Math.random() * IMG.nubes.length)], scale: 0.5 + Math.random() * 0.5, vx: -(20 + Math.random() * 40) }); } }
         function spawnObstacle(kind = 'paraguas', radius = 30) { 
             if(kind === 'espuma') radius = 20 + Math.random() * 10; else if (kind === 'helado') radius = 35; 
@@ -510,15 +515,21 @@
         function draw(){ 
             ctx.clearRect(0,0,WORLD.w,WORLD.h); 
             
+            // 🟢 FIX PANTALLA NEGRA: Dibuja fondo sólido si la imagen falla
             // Draw Background
-            if(currentBg) ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
+            if(currentBg && currentBg.complete) {
+                ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
+            } else {
+                ctx.fillStyle = '#1b1b1f'; // Color de fondo del canvas (CSS)
+                ctx.fillRect(0, 0, WORLD.w, WORLD.h);
+            }
             
             // Fade Overlay on Game Over
             if(gameOver || gameComplete){ ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(0,0,WORLD.w,WORLD.h); } 
 
             // Draw Clouds
             for(const c of CLOUD.list){
-                if(c.imgRef){ const w = c.imgRef.width * c.scale; const h = c.imgRef.height * c.scale; ctx.drawImage(c.imgRef, c.x - w/2, c.y - h/2, w, h); }
+                if(c.imgRef && c.imgRef.complete){ const w = c.imgRef.width * c.scale; const h = c.imgRef.height * c.scale; ctx.drawImage(c.imgRef, c.x - w/2, c.y - h/2, w, h); }
             }
             
             // Draw Collectables (Bananas/Bowls/Patitos)
@@ -526,16 +537,16 @@
                 ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2); ctx.stroke();
                 let itemImg = IMG.banana;
                 if(b.kind === 'cuenco') itemImg = IMG.cuenco;
-                else if(b.kind === 'patito') itemImg = IMG.bonusPatitos[Math.floor(Date.now()/500)%IMG.bonusPatitos.length]; // Animación simple
+                else if(b.kind === 'patito') itemImg = IMG.bonusPatitos[Math.floor(Date.now()/500)%IMG.bonusPatitos.length]; 
                 
-                if(itemImg) ctx.drawImage(itemImg, b.x - b.r, b.y - b.r, b.r*2, b.r*2); 
+                if(itemImg && itemImg.complete) ctx.drawImage(itemImg, b.x - b.r, b.y - b.r, b.r*2, b.r*2); 
             } 
             
             // Draw Obstacles
             for(const o of obstacles){ 
                 ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; ctx.beginPath(); ctx.arc(o.x, o.y, o.r + 6, 0, Math.PI * 2); ctx.fill();
                 let obsImg = o.imgRef;
-                if(obsImg) ctx.drawImage(obsImg, o.x - o.r, o.y - o.r, o.r*2, o.r*2); 
+                if(obsImg && obsImg.complete) ctx.drawImage(obsImg, o.x - o.r, o.y - o.r, o.r*2, o.r*2); 
             } 
             
             // Draw Pulses
@@ -543,15 +554,14 @@
                 ctx.strokeStyle = `rgba(134, 239, 172, ${p.life / PULSE.life})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
             }
 
-            // Draw Ground (Image)
+            // Draw Ground (Solid color fallback if image is missing)
             const groundH = WORLD.h - GROUND_H;
-            ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
-            if(IMG.suelo){
+            if(IMG.suelo && IMG.suelo.complete){
                 for(const s of sueloScroll){
                      ctx.drawImage(IMG.suelo, s.x, groundH, WORLD.w, GROUND_H);
                 }
             } else {
-                 // Dibuja el color si no hay imagen
+                 // Dibuja el color si la imagen del suelo falla (para que no sea negro)
                  ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
             }
             
@@ -561,14 +571,12 @@
             else if(player.state === 'gritando') erizoImg = IMG.erizo.gritando; 
             else if(player.state === 'meditando') erizoImg = IMG.erizo.meditando; 
             else if(Math.random() < 0.002 && IMG.erizo.parpadeo) erizoImg = IMG.erizo.parpadeo;
-            if(erizoImg) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2); 
+            
+            // Asegúrate de que la imagen del erizo esté cargada
+            if(erizoImg && erizoImg.complete) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2); 
             
             // Draw Boss/Bonus UI (Simplified)
-            if(!bossActive && inBossPhase && IMG.bossCartels[1]){ ctx.drawImage(IMG.bossCartels[1], WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); }
-            if(inBossPhase && bossActive){
-                const num = Math.ceil(BOSS_DURATION - bossTimer);
-                // Aquí se dibujarían los números si tienes assets específicos
-            }
+            if(!bossActive && inBossPhase && IMG.bossCartels[1] && IMG.bossCartels[1].complete){ ctx.drawImage(IMG.bossCartels[1], WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); }
         } 
         
         // ===== GAME LOOP: FRAME =====
@@ -591,12 +599,15 @@
             return new Promise((resolve, reject)=>{ 
                 const img = new Image(); 
                 img.onload = ()=>resolve(img); 
-                img.onerror = ()=> { resolve(null); };
+                img.onerror = ()=> { 
+                    console.warn(`Error al cargar imagen: ${src}. Usando color de fallback.`); 
+                    resolve(null); // Resuelve con null en caso de error
+                };
                 img.src = src; 
             }); 
         } 
 
-        // Carga de Assets (asegúrate de que todos los assets están en la carpeta 'assets/')
+        // Carga de Assets
         async function loadAll(){ 
             // 1. Loader: Elegir imagen de loader al azar
             const randomLoader = ASSETS.loader[Math.floor(Math.random() * ASSETS.loader.length)];
@@ -643,10 +654,10 @@
             stopMusic(); 
             // 3. Cuenta atrás sin números, solo imágenes grandes
             showMainCountdown(()=>{ 
-                resetAll(); 
-                started = true; // El juego empieza después del countdown
+                resetAll(); // resetAll ahora solo detiene la música (si hubiera)
+                started = true; 
                 lastFrame = performance.now(); 
-                if(musicEnabled) playMusic(MUSIC.base); 
+                if(musicEnabled) playMusic(MUSIC.base); // 🟢 FIX MÚSICA: Inicia música base solo aquí
                 requestAnimationFrame(frame); 
             }); 
         }); 
@@ -703,6 +714,7 @@
             }
 
             resetVolatileState(); 
+            if(musicEnabled) playMusic(MUSIC.base); // 🟢 FIX MÚSICA: Inicia música base al reiniciar
             lastFrame = performance.now();
             requestAnimationFrame(frame);
         });
@@ -730,7 +742,7 @@
             else if(key === 'm') startBonusPhaseTest(3); // Bonus 3 (Activa el final Zen)
             
             // Reset
-            else if(key === 'r') { resetAll(); lastFrame = performance.now(); requestAnimationFrame(frame); } 
+            else if(key === 'r') { resetAll(); lastFrame = performance.now(); if(musicEnabled) playMusic(MUSIC.base); requestAnimationFrame(frame); } 
         });
         
     })();
