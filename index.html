@@ -281,8 +281,9 @@
             
             gameOver = false;
             inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
-            bossCountdown = 0; bossTimer = 0; bonusTimer = 0;
-            
+            // FIX DEL ERROR: bossCountdown ya no se usa, por lo que se elimina la referencia
+            bossTimer = 0; bonusTimer = 0; 
+
             stopAllSfx();
             stopMusic(); // Solo detiene, no inicia la base
             
@@ -324,7 +325,7 @@
         function startBossPhase(stage=1, restart=false){ 
             if(stage > 3) stage = 3; 
             inBossPhase = true; inBonusPhase = false; bossActive = false; 
-            bossTimer = 0; bossCountdown = BOSS_DURATION; 
+            bossTimer = 0; // bossCountdown era innecesario aquí
             bossStageIndex = stage; 
             SPEED.scroll = BASE_SPEED_SCROLL; SPAWN.interval = BASE_SPAWN_INTERVAL; 
             obstacles.length = 0; bananas.length = 0; pulses.length = 0; 
@@ -633,6 +634,7 @@
             IMG.banana = await loadImage(ASSETS.banana); IMG.cuenco = await loadImage(ASSETS.cuenco);
             for(const s of ASSETS.nubes) IMG.nubes.push(await loadImage(s));
             // Suelo (asumiendo que tienes un asset para el suelo)
+            // 🟢 FIX DE RUTA POTENCIAL
             IMG.suelo = await loadImage('assets/suelo.png'); 
 
             // Contadores
