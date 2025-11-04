@@ -255,7 +255,7 @@
         window.addEventListener('resize', fit); fit();
         function withinCanvas(clientX, clientY){ 
             const rect = canvas.getBoundingClientRect();
-            return clientX >= rect.left && clientY >= rect.top && clientX <= rect.right && clientY <= rect.bottom;
+            return clientX >= rect.left && clientY >= rect.top && clientY <= rect.bottom;
         } 
         function dist2(x1, y1, x2, y2) { const dx = x1 - x2; const dy = y1 - y2; return dx * dx + dy * dy; }
 
@@ -577,6 +577,15 @@
             
             // Draw Boss/Bonus UI (Simplified)
             if(!bossActive && inBossPhase && IMG.bossCartels[1] && IMG.bossCartels[1].complete){ ctx.drawImage(IMG.bossCartels[1], WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); }
+
+            // 🌟 DEBUG VISUAL AÑADIDO: Muestra un mensaje si el bucle de dibujo está activo 🌟
+            if(started && !gameOver){
+                ctx.fillStyle = '#6ee7b7';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Game Loop: ACTIVO (¡Si ves esto, el problema es la carga de imágenes!)', WORLD.w / 2, 50);
+            } 
+            // 🌟 FIN DEBUG VISUAL 🌟
         } 
         
         // ===== GAME LOOP: FRAME =====
@@ -747,6 +756,5 @@
         
     })();
 </script>
-
 </body>
 </html>
