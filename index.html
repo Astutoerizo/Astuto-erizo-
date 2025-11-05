@@ -9,7 +9,7 @@ html,body{margin:0;height:100%;background:#0e0e10;color:#fff;font-family:system-
 #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:transparent}
 canvas{background:#1b1b1f;touch-action:none;display:block}
 
-/* 4. Barra de carga (HUD) ajustada */
+/* 6. Contadores: CSS verificado para visibilidad */
 .hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);width:min(92vw,500px);
 pointer-events:none;display:flex;align-items:center;gap:12px;justify-content:space-between;font-weight:600;z-index:1200}
 .bar{width:250px;height:40px; 
@@ -22,10 +22,8 @@ position:relative;
 .cooldown .fill{background:rgba(239, 68, 68, 0.6);}
 .score{min-width:80px;text-align:center;color:#fff}
 
-/* 4. Botón de música reposicionado para estar siempre visible en el HUD superior */
 .hud-btn{pointer-events:auto;cursor:pointer;padding:6px 10px;background:#24242a;border-radius:8px;font-size:14px;user-select:none;z-index:1500}
 
-/* 2. Estilos para el menú principal */
 #menuPanel .card h2:first-of-type {
 font-size: 2.2em;
 margin-bottom: 0;
@@ -43,7 +41,6 @@ color: #6ee7b7;
 .card{background:#1e1e24;border:1px solid #333;border-radius:16px;padding:20px;width:min(92vw,420px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .btn{display:inline-block;margin-top:12px;padding:10px 16px;border-radius:12px;background:#6ee7b7;color:#0b0b0d;font-weight:700;cursor:pointer;user-select:none;pointer-events:auto}
 
-/* 3. Cuenta atrás más grande y sin texto */
 #countdown{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter: blur(2px);z-index:2000}
 #countdown.show{display:flex}
 #countdown #countNum{
@@ -58,7 +55,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
 @keyframes zoomIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
 
-/* 1. Loader con la animación suave */
 #loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0e0e10;z-index:3000}
 #loader img{max-width:220px;animation:float 1.8s ease-in-out infinite;display:block}
 #loader p{margin-top:12px;font-size:18px;color:#6ee7b7;font-weight:700;animation:blink 1.2s infinite}
@@ -68,7 +64,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 .shake{animation:shakeAnim .45s ease} @keyframes shakeAnim{0%{transform:none}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}100%{transform:none}}
 #flash{pointer-events:none;position:fixed;inset:0;background:#fff;opacity:0;transition:opacity .12s;z-index:2500}
 
-/* Estilo para el erizo flotante en la pantalla de Zen */
 @keyframes floatAnim{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 
 @media(max-width:420px){.card{width:92vw;padding:16px}.hud{top:6px;gap:8px}.score{min-width:80px;font-size:13px}}
@@ -134,24 +129,23 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    // 7. Ajuste: PULSE.base es el radio mínimo, PULSE.max es el radio para carga completa (Max 100).
-    // Base 120 -> 80. Max 380 -> 250.
-    const PULSE = { base: 80, max: 250, life: 0.25 }; 
+    // 1. Ajuste: Aumentar el radio máximo de la onda a 350
+    const PULSE = { base: 80, max: 350, life: 0.25 }; 
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
-    // 5. Ajuste: Aumentar la fuerza de inhalación (más reactiva)
-    const PHYSICS = { gravity: 1800, inhaleForce: -2400, maxVy: 900 }; 
+    // 2. Ajuste: Aumentar la fuerza de inhalación (más reactiva)
+    const PHYSICS = { gravity: 1800, inhaleForce: -2800, maxVy: 900 }; 
     const GROUND_H = 180;
     const BOSS_DURATION = 10; 
     
-    // 2. Ajuste: Umbrales Progresivos (¡Dificultad aumentada!)
+    // Puntuaciones (sin cambios)
     const BOSS_SCORE_1 = TEST_MODE ? 5 : 50; 
     const BONUS_SCORE_1 = TEST_MODE ? 10 : 75; 
-    const BOSS_SCORE_2 = TEST_MODE ? 15 : 150; // Ajustado a 150
-    const BONUS_SCORE_2 = TEST_MODE ? 20 : 225; // Ajustado a 225
-    const BOSS_SCORE_3 = TEST_MODE ? 25 : 300; // Ajustado a 300
-    const BONUS_SCORE_3 = TEST_MODE ? 30 : 400; // Ajustado a 400
+    const BOSS_SCORE_2 = TEST_MODE ? 15 : 150; 
+    const BONUS_SCORE_2 = TEST_MODE ? 20 : 225; 
+    const BOSS_SCORE_3 = TEST_MODE ? 25 : 300; 
+    const BONUS_SCORE_3 = TEST_MODE ? 30 : 400; 
 
-    // ===== DOM ===== 
+    // ===== DOM (sin cambios) ===== 
     const canvas = document.getElementById('game'); 
     const ctx = canvas.getContext('2d');
     const wrap = document.getElementById('wrap'); 
@@ -173,7 +167,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const flash = document.getElementById('flash'); 
     const erizoZenEl = document.getElementById('erizoZen'); 
 
-    // ===== AUDIO ===== 
+    // ===== AUDIO (sin cambios) ===== 
     const SFX = { bowl: 'assets/sonido_bowl_limpio.mp3', banana: 'assets/sonido_recolectar_platano.mp3', inhale: 'assets/sonido_inhalar.mp3', chocar: 'assets/sonido_chocar.mp3', woosh: 'assets/grito.mp3', gong: 'assets/gong.mp3', level_complete: 'assets/level_complete.mp3' };
     const MUSIC_PATHS = { menu: 'assets/musica_pantalla_principal.mp3', base: 'assets/musica_base.mp3', bonus: 'assets/musica_bonus.mp3', boss: 'assets/musica_boss.mp3' };
     const MUSIC = {};
@@ -181,7 +175,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let musicEnabled = true; 
     const sfxPlayers = new Set();
     
-    // 6. Ajuste: Reducir volumen del grito (woosh)
     function playSfx(name, volume=1.0){ 
         if (name === 'woosh') volume = 0.6; // Ajuste específico para el grito
         const src = SFX[name]; if(!src || !musicEnabled) return; 
@@ -247,7 +240,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let lastFrame = performance.now();
     let shakeDuration = 0;
     let bossTimer = 0, bonusTimer = 0, bossSpawnTimer = 0;
-    // 9. Ajuste: BossEntranceTimer a 2.0s
     let bossEntranceTimer = 2.0; 
     let isDown=false, justReleased=false;
     
@@ -296,7 +288,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         gameOver = false;
         inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
         bossTimer = 0; bonusTimer = 0; 
-        bossEntranceTimer = 2.0; // Reiniciar con la pausa del cartel
+        bossEntranceTimer = 2.0; 
         sparks.length = 0; 
 
         stopAllSfx();
@@ -316,7 +308,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         bossStageIndex = 1;
     }
     
-    // ===== PARTICLE SYSTEM (CHISPAS) (sin cambios) =====
+    // ... (rest of particle/cloud/spawn functions remain unchanged) ...
+
     function spawnSparks(x, y, count, color = '#6ee7b7'){
         for(let i=0; i<count; i++){
             const angle = Math.random() * Math.PI * 2;
@@ -334,7 +327,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== GAME ENTITIES & SPAWNERS ===== 
     const IMG = { fondos: {}, erizo: {}, obstaculos: [], banana: null, cuenco: null, nubes: [], contador: [], contadorGo: null, bossImgs: {}, bossCartels: {}, bossEspumas: {1:[],2:[],3:[]}, bonusPatitos: [], bonusBg: null, barraInhalacion: null, suelo: null };
 
     function initClouds(){ 
@@ -350,7 +342,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         } 
     }
 
-    // 3. & 4. Ajuste: spawnObstacle con lógica de posición aleatoria vertical
     function spawnObstacle(kind = 'paraguas', radius = 45) { 
         let y_offset = 0;
         let isFloating = false;
@@ -359,32 +350,28 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(kind === 'helado') {
             imgRef = IMG.obstaculos[1];
         } else if (kind === 'espuma') {
-            // 3. Ajuste: Proyectiles de Boss (Espumas/Lanzas)
             radius = 30 + Math.random() * 15; 
-            isFloating = true; // Siempre flotan
+            isFloating = true; 
             y_offset = Math.random() * (WORLD.h - GROUND_H - 2 * radius); 
             const stageAssets = IMG.bossEspumas[bossStageIndex] || IMG.bossEspumas[1]; 
             imgRef = stageAssets[Math.floor(Math.random()*stageAssets.length)] || null;
             
         } else {
-            // 4. Ajuste: Obstáculos de fase normal (Paraguas o Helado) con probabilidad de flotar
-            if (Math.random() < 0.4) { // 40% de que flote
+            if (Math.random() < 0.4) { 
                 isFloating = true;
                 y_offset = Math.random() * (WORLD.h - GROUND_H - 2 * radius - 100); 
             }
         }
         
-        // La posición Y se calcula: Altura del suelo - radio - offset
         let yPos = WORLD.h - GROUND_H - radius;
         if(isFloating) {
-             yPos = Math.max(radius + 50, radius + y_offset); // Asegura que no está demasiado cerca del techo
+             yPos = Math.max(radius + 50, radius + y_offset); 
         }
 
         obstacles.push({ x: WORLD.w + radius, y: yPos, r: radius, kind: kind, imgRef: imgRef }); 
     }
 
     function spawnCollectable(kind = 'banana', radius = 30) { 
-        // Se puede reutilizar la lógica de altura para que floten
         const height = WORLD.h - GROUND_H - radius * 2 - Math.random() * 400; 
         const speed_mult = (kind === 'cuenco') ? 1.5 : 1; 
         let itemRef = { x: WORLD.w + radius, y: Math.max(height, 100), r: radius, kind: kind, speedMult: speed_mult, points: (kind === 'cuenco' ? 5 : 1) };
@@ -405,12 +392,11 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         spawnCollectable(patitoType, 35); 
     }
     
-    // ===== BOSS/BONUS CONTROL =====
+    // ===== BOSS/BONUS CONTROL (sin cambios) =====
     function startBossPhase(stage=1, restart=false){ 
         if(stage > 3) stage = 3; 
         inBossPhase = true; inBonusPhase = false; bossActive = false; 
         bossTimer = 0;
-        // 9. Ajuste: Entrada de jefe (2.0s para que se vea el cartel)
         bossEntranceTimer = 2.0; 
         bossStageIndex = stage; 
         SPEED.scroll = BASE_SPEED_SCROLL; SPAWN.interval = BASE_SPAWN_INTERVAL; 
@@ -418,13 +404,13 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         
         if(!restart) fleetingFlash(); 
         
+        // 5. Verificación: Asignación de fondo para Boss 3 (stage=3) es correcta
         if(stage === 1) currentBg = IMG.fondos.desierto || currentBg; 
         else if(stage === 2) currentBg = IMG.fondos.helado || currentBg; 
         else currentBg = IMG.fondos.zen_boss || currentBg; 
         
         if(musicEnabled) playMusic(MUSIC.boss); 
         
-        // 9. Ajuste: El cartel se dibuja, pero el bossActive se activa después.
         setTimeout(()=>{ 
             if(inBossPhase) bossActive = true; 
         }, bossEntranceTimer * 1000);
@@ -502,7 +488,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }, { once: true });
     }
 
-    // ===== GAME LOOP: UPDATE (sin cambios en la estructura) ===== 
+    // ===== GAME LOOP: UPDATE (Física y Colisiones) ===== 
     function update(dt){ 
         if(!started || gameOver) return; 
         if(shakeDuration > 0) { shakeDuration -= dt; if(shakeDuration <= 0) { wrap.classList.remove('shake'); } }
@@ -510,18 +496,22 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         // Player Physics
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
-            // 5. Ajuste: Mayor fuerza para inhalar.
+            
+            // 2. Fix: Reacción Inmediata. Si está cayendo (vy > -500), dale un impulso instantáneo.
+            if (player.vy > -500) { 
+                 player.vy = -1200; // Impulso inicial para reaccionar al toque
+            }
+            
+            // Aceleración continua hacia arriba
             player.vy += (PHYSICS.inhaleForce - PHYSICS.gravity) * dt; 
             CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
             hint.style.display = 'none';
         } else if (justReleased) {
             player.state = 'gritando'; 
-            // 6. Ajuste: Volumen de grito en playSfx (ya aplicado)
             playSfx('woosh'); 
             CHARGE.cooldown = CHARGE.cooldownBase; 
             justReleased = false;
             
-            // 7. Ajuste: El radio máximo depende de la carga
             const charge_pct = CHARGE.value / CHARGE.max;
             const pulse_r = PULSE.base + (PULSE.max - PULSE.base) * charge_pct;
             pulses.push({ x: player.x, y: player.y, r: 0, maxR: pulse_r, life: PULSE.life, charge: CHARGE.value }); 
@@ -532,8 +522,21 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
         
         CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
+
+        // 3. Fix: Clamping position and preventing 'sticking' by zeroing out velocity
         player.y += player.vy * dt;
-        player.y = Math.max(player.r, Math.min(WORLD.h - GROUND_H - player.r, player.y));
+
+        // Limite superior
+        if (player.y < player.r) {
+            player.y = player.r;
+            if (player.vy < 0) player.vy = 0; // Fix 3: Reset upward velocity
+        }
+        // Limite inferior (suelo)
+        if (player.y > WORLD.h - GROUND_H - player.r) {
+            player.y = WORLD.h - GROUND_H - player.r;
+            if (player.vy > 0) player.vy = 0; // Reset downward velocity
+        }
+
         player.vy = Math.min(PHYSICS.maxVy, player.vy);
 
         // World Scroll (sin cambios)
@@ -567,18 +570,17 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             if(s.life <= 0) sparks.splice(i, 1);
         }
 
-        // Normal Spawn
+        // Normal Spawn (sin cambios)
         if(!inBossPhase && !inBonusPhase){
             SPAWN.timer += dt;
             if(SPAWN.timer >= SPAWN.interval){
                 SPAWN.timer = 0;
-                // 4. Ajuste: Más variedad de spawns en fase normal.
                 if(Math.random() < 0.6) spawnObstacle(Math.random() < 0.5 ? 'paraguas' : 'helado');
                 if(Math.random() < 0.4) spawnCollectable(Math.random() < 0.1 ? 'cuenco' : 'banana');
             }
         }
 
-        // Progression Check (2. Ajuste: Puntuaciones ajustadas)
+        // Progression Check (sin cambios)
         if(!inBossPhase && !inBonusPhase){ 
             if(POINTS.total >= BOSS_SCORE_1 && !bossesDone.has(1)){ bossesDone.add(1); startBossPhase(1); } 
             else if(POINTS.total >= BONUS_SCORE_1 && !bonusDone.has(1)){ bonusDone.add(1); startBonusPhase(); } 
@@ -588,30 +590,39 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             else if(POINTS.total >= BONUS_SCORE_3 && !bonusDone.has(3)){ bonusDone.add(3); startBonusPhase(); }
         } 
         
-        // Collision & Boss/Bonus Logic
+        // Collision & Pulse Logic
         for(let p=pulses.length-1; p>=0; p--){
             const pulse = pulses[p];
-            // 7. Ajuste: Lógica de destrucción proporcional a la carga del pulso.
-            // Para destruir, el radio actual (pulse.r) debe estar cerca de alcanzar el máximo (pulse.maxR) 
-            // Y el maxR debe reflejar la carga (pulse.charge). Un 60% de carga es necesario para afectar más.
-            const minEffectiveRadius = PULSE.base + (PULSE.max - PULSE.base) * 0.40; // Mínimo 40% de carga para tener efecto.
+            // 1. Fix: Lógica de destrucción proporcional mejorada (Full charge is instant kill)
+            const isMaxCharge = pulse.charge >= CHARGE.max * 0.95; 
 
-            if(pulse.maxR >= minEffectiveRadius && pulse.life > PULSE.life * 0.15){ // Solo pulsos con cierta fuerza tienen potencial
-                
-                const destroyRadius = pulse.maxR * (pulse.charge / CHARGE.max); // El radio máximo de destrucción efectivo.
+            if(pulse.life > PULSE.life * 0.15){ 
                 
                 for(let i=obstacles.length-1; i>=0; i--){
                     const o = obstacles[i];
-                    
-                    // La destrucción ocurre si el obstáculo está dentro del pulso Y el pulso ha crecido lo suficiente (pulse.r > r_min)
-                    if(dist2(o.x, o.y, pulse.x, pulse.y) <= (o.r + pulse.r)*(o.r + pulse.r)){ 
+                    const distSq = dist2(o.x, o.y, pulse.x, pulse.y);
+                    const radiusSum = o.r + pulse.r;
+
+                    if(distSq <= radiusSum * radiusSum){ 
                         
-                         // Para que sea "proporcional", si la onda es grande (pulse.r > destroyRadius * 0.7), destruye.
-                         // Esto asegura que la onda fuerte destruye pronto y la débil solo al expandirse completamente.
-                         if (pulse.r >= o.r + 10 || pulse.r >= destroyRadius * 0.7) { 
+                        let shouldDestroy = false;
+                        
+                        // 1. Carga máxima: Destruye todo en un radio grande (MaxR) instantáneamente.
+                        if (isMaxCharge && pulse.r >= o.r + 5) { // Si la onda ha crecido ligeramente
+                            shouldDestroy = true;
+                        } 
+                        // 2. Carga proporcional (onda suave): Solo destruye cerca del radio final de la onda (proporcional).
+                        else if (!isMaxCharge) {
+                            // Destruction zone is only when pulse.r is close to pulse.maxR (the final size for that charge)
+                            if (pulse.r >= pulse.maxR * 0.75) { 
+                                 shouldDestroy = true;
+                            }
+                        }
+                        
+                        if (shouldDestroy) { 
                             obstacles.splice(i, 1); POINTS.total += 1; playSfx('gong', 0.5); 
                             spawnSparks(o.x, o.y, 8, '#ef4444');
-                         }
+                        }
                     }
                 }
             }
@@ -639,9 +650,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
         
-        // Boss Phase Logic
+        // Boss Phase Logic (sin cambios)
         if(inBossPhase){
-            // 9. Ajuste: Esperar a que el cartel desaparezca (timer < 0)
             if(bossEntranceTimer > 0){
                 bossEntranceTimer -= dt;
                 if(bossEntranceTimer < 1.0) { 
@@ -649,13 +659,11 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                 }
                 if(bossEntranceTimer <= 0){
                     bossEntranceTimer = 0;
-                    // bossActive es activado por el setTimeout en startBossPhase (2.0s)
                 }
             }
 
             if(bossActive){
                 bossTimer += dt; bossSpawnTimer += dt;
-                // 3. Ajuste: Lanzas de Bosses
                 if(bossSpawnTimer > 0.3){ spawnObstacle('espuma'); bossSpawnTimer = 0; }
                 if(bossTimer >= BOSS_DURATION){
                     bossActive = false; inBossPhase = false; fleetingFlash(); playSfx('level_complete', 0.7);
@@ -683,17 +691,16 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // UI Update (sin cambios)
+        // 6. Contadores: UI Update (verificado, es correcto)
         zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
         zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
         scoreEl.textContent = "Puntos: " + POINTS.total;
     } 
 
-    // ===== GAME LOOP: DRAW ===== 
+    // ===== GAME LOOP: DRAW (sin cambios) ===== 
     function draw(){ 
         ctx.clearRect(0,0,WORLD.w,WORLD.h); 
         
-        // Draw Background (sin cambios)
         if(currentBg && currentBg.complete) {
             ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
         } else {
@@ -701,15 +708,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             ctx.fillRect(0, 0, WORLD.w, WORLD.h);
         }
         
-        // Fade Overlay on Game Over (sin cambios)
         if(gameOver || gameComplete){ ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(0,0,WORLD.w,WORLD.h); } 
 
-        // Draw Clouds (sin cambios)
         for(const c of CLOUD.list){
             if(c.imgRef && c.imgRef.complete){ const w = c.imgRef.width * c.scale; const h = c.imgRef.height * c.scale; ctx.drawImage(c.imgRef, c.x - w/2, c.y - h/2, w, h); }
         }
         
-        // Draw Collectables (sin cambios)
         for(const b of bananas){ 
             if(started && !gameOver && Math.random() < 0.3) {
                 spawnSparks(b.x, b.y, 1, '#6ee7b7'); 
@@ -722,19 +726,16 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             if(itemImg && itemImg.complete) ctx.drawImage(itemImg, b.x - b.r, b.y - b.r, b.r*2, b.r*2); 
         } 
         
-        // Draw Obstacles (sin cambios)
         for(const o of obstacles){ 
             ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; ctx.beginPath(); ctx.arc(o.x, o.y, o.r + 6, 0, Math.PI * 2); ctx.fill();
             let obsImg = o.imgRef;
             if(obsImg && obsImg.complete) ctx.drawImage(obsImg, o.x - o.r, o.y - o.r, o.r*2, o.r*2); 
         } 
         
-        // Draw Pulses (sin cambios)
         for(const p of pulses){
             ctx.strokeStyle = `rgba(134, 239, 172, ${p.life / PULSE.life})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
         }
 
-        // Draw Ground (sin cambios)
         const groundH = WORLD.h - GROUND_H;
         if(IMG.suelo && IMG.suelo.complete){
             for(const s of sueloScroll){
@@ -744,7 +745,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
              ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
         }
         
-        // Draw Player (Erizo) (sin cambios)
         let erizoImg = IMG.erizo.calmado; 
         if(player.state === 'inhalando') erizoImg = IMG.erizo.inhalando;
         else if(player.state === 'gritando') erizoImg = IMG.erizo.gritando; 
@@ -753,23 +753,18 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         
         if(erizoImg && erizoImg.complete) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2); 
         
-        // Draw Boss/Bonus UI 
-        // 1. Ajuste: Dimensiones y posición del Boss.
         const BOSS_H = WORLD.h * 0.75; 
-        const BOSS_W_DRAW = WORLD.w * 0.8; // Ancho para dibujar (ocupa 80% del ancho)
-        const BOSS_X_IDLE = WORLD.w - (BOSS_W_DRAW/2) + 100; // Posición final un poco a la derecha (fuera del centro).
+        const BOSS_W_DRAW = WORLD.w * 0.8; 
+        const BOSS_X_IDLE = WORLD.w - (BOSS_W_DRAW/2) + 100; 
         const BOSS_Y_IDLE = WORLD.h/2 - BOSS_H/2;
 
         if(inBossPhase){
             const cartelImg = IMG.bossCartels[bossStageIndex] || IMG.bossCartels[1];
             
-            // 9. El cartel solo se dibuja mientras el timer es > 0
             if(bossEntranceTimer > 0 && cartelImg && cartelImg.complete){ 
-                // Draw Cartel
                 ctx.drawImage(cartelImg, WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); 
             }
             
-            // 9. El boss empieza a moverse si el timer está en su cuenta regresiva (o ya en activo).
             if(bossEntranceTimer < 2.0 || bossActive){ 
                 const bossImg = IMG.bossImgs[bossStageIndex] || IMG.bossImgs[1]; 
                 
@@ -778,21 +773,16 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                     let bossY = BOSS_Y_IDLE;
                     
                     if(bossActive){
-                         // Vaiven (oscilación lateral)
                          const vaiven = Math.sin(Date.now() / 300) * 10;
                          bossX += vaiven;
                     } else {
-                         // Entrada (movimiento desde la derecha)
-                         // 9. Ajuste: La entrada sigue el timer.
                          const progress = (2.0 - bossEntranceTimer) / 2.0; 
                          const startX = WORLD.w + BOSS_W_DRAW/2;
                          bossX = startX + (BOSS_X_IDLE - startX) * Math.min(progress * 1.5, 1.0);
                     }
                     
-                    // 1. Ajuste: Dibujar el boss más grande y a la derecha (posiblemente fuera de pantalla)
                     ctx.drawImage(bossImg, bossX - BOSS_W_DRAW/2, bossY, BOSS_W_DRAW, BOSS_H);
                     
-                    // Red Sparks 
                     if(bossActive && Math.random() < 0.5) {
                         spawnSparks(bossX, bossY + BOSS_H/2, 1, '#ef4444'); 
                     }
@@ -800,7 +790,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
         
-        // Draw Sparks (sin cambios)
         for(const s of sparks){
             ctx.fillStyle = s.color;
             ctx.globalAlpha = s.life / s.maxLife; 
@@ -825,7 +814,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== INIT / START FLOW (sin cambios significativos) =====
+    // ===== INIT / START FLOW (sin cambios) =====
     async function loadImage(src){ 
         return new Promise((resolve, reject)=>{ 
             const img = new Image(); 
@@ -855,7 +844,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
         for(const s of ASSETS.contador) IMG.contador.push(await loadImage(s)); IMG.contadorGo = await loadImage(ASSETS.contadorGo); 
         
-        // Carga de Bosses 1, 2 y 3
         const bossStages = [ASSETS.boss1, ASSETS.boss2, ASSETS.boss3];
         for(let i=1; i<=3; i++){
             const asset = bossStages[i-1];
@@ -865,7 +853,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             for(const s of asset.lanzas) IMG.bossEspumas[i].push(await loadImage(s));
         }
         
-        // Carga de Patitos
         IMG.bonusBg = await loadImage(ASSETS.bonus.bg); 
         IMG.bonusPatitos.push({img: await loadImage(ASSETS.bonus.patito1.img), points: ASSETS.bonus.patito1.points, kind: ASSETS.bonus.patito1.kind});
         IMG.bonusPatitos.push({img: await loadImage(ASSETS.bonus.patito2.img), points: ASSETS.bonus.patito2.points, kind: ASSETS.bonus.patito2.kind});
@@ -896,7 +883,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
     btnStart.addEventListener('click', btnStartHandler); 
     
-    // FIX: Mostrar el menú principal al terminar la carga
     menuPanel.classList.add('show'); 
 
     const COUNTDOWN_IMAGES = ASSETS.contador.slice();
@@ -953,7 +939,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         requestAnimationFrame(frame);
     });
 
-    // TECLAS DE TESTEO (Completado)
     window.addEventListener('keydown', (e)=>{ 
         if(!TEST_MODE) return; 
         const key = e.key.toLowerCase();
