@@ -134,19 +134,22 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    const PULSE = { base: 120, max: 380, life: 0.25 };
+    // 7. Ajuste: PULSE.base es el radio mínimo, PULSE.max es el radio para carga completa (Max 100).
+    // Base 120 -> 80. Max 380 -> 250.
+    const PULSE = { base: 80, max: 250, life: 0.25 }; 
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
-    const PHYSICS = { gravity: 1800, inhaleForce: -1800, maxVy: 900 }; 
+    // 5. Ajuste: Aumentar la fuerza de inhalación (más reactiva)
+    const PHYSICS = { gravity: 1800, inhaleForce: -2400, maxVy: 900 }; 
     const GROUND_H = 180;
     const BOSS_DURATION = 10; 
     
-    // Umbrales Progresivos 
+    // 2. Ajuste: Umbrales Progresivos (¡Dificultad aumentada!)
     const BOSS_SCORE_1 = TEST_MODE ? 5 : 50; 
     const BONUS_SCORE_1 = TEST_MODE ? 10 : 75; 
-    const BOSS_SCORE_2 = TEST_MODE ? 15 : 100;
-    const BONUS_SCORE_2 = TEST_MODE ? 20 : 125;
-    const BOSS_SCORE_3 = TEST_MODE ? 25 : 150;
-    const BONUS_SCORE_3 = TEST_MODE ? 30 : 200;
+    const BOSS_SCORE_2 = TEST_MODE ? 15 : 150; // Ajustado a 150
+    const BONUS_SCORE_2 = TEST_MODE ? 20 : 225; // Ajustado a 225
+    const BOSS_SCORE_3 = TEST_MODE ? 25 : 300; // Ajustado a 300
+    const BONUS_SCORE_3 = TEST_MODE ? 30 : 400; // Ajustado a 400
 
     // ===== DOM ===== 
     const canvas = document.getElementById('game'); 
@@ -178,7 +181,9 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let musicEnabled = true; 
     const sfxPlayers = new Set();
     
+    // 6. Ajuste: Reducir volumen del grito (woosh)
     function playSfx(name, volume=1.0){ 
+        if (name === 'woosh') volume = 0.6; // Ajuste específico para el grito
         const src = SFX[name]; if(!src || !musicEnabled) return; 
         try{ const a = new Audio(src); a.volume = volume; a.play().catch(()=>{}); 
             sfxPlayers.add(a); a.addEventListener('ended', ()=> sfxPlayers.delete(a));
@@ -207,7 +212,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         } 
     }); 
 
-    // ===== ASSETS PATHS =====
+    // ===== ASSETS PATHS (sin cambios) =====
     const ASSETS = { 
         loader: ['assets/loader.png', 'assets/loader1.png', 'assets/loader2.png', 'assets/loader3.png'],
         fondos: { calc: 'assets/fondo_calc.png', desierto: 'assets/fondo_desierto.png', helado: 'assets/fondo_helado.png', zen_boss: 'assets/fondo_zen_boss.png', bonus: 'assets/bonus/fondo_bonus.png' }, 
@@ -226,7 +231,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     };
 
-    // ===== ENTITIES & GAME STATE ===== 
+    // ===== ENTITIES & GAME STATE (sin cambios significativos) ===== 
     const PLAYER_R = 55; 
     const player = { x: 100, y: WORLD.h - GROUND_H - PLAYER_R, r: PLAYER_R, state: 'calmado', vy:0, mareo:0 };
     const sueloScroll = [{ x:0 }, { x: WORLD.w }];
@@ -242,7 +247,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let lastFrame = performance.now();
     let shakeDuration = 0;
     let bossTimer = 0, bonusTimer = 0, bossSpawnTimer = 0;
-    let bossEntranceTimer = 0; 
+    // 9. Ajuste: BossEntranceTimer a 2.0s
+    let bossEntranceTimer = 2.0; 
     let isDown=false, justReleased=false;
     
     // ===== UTILITIES (sin cambios) =====
@@ -290,7 +296,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         gameOver = false;
         inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
         bossTimer = 0; bonusTimer = 0; 
-        bossEntranceTimer = 0; 
+        bossEntranceTimer = 2.0; // Reiniciar con la pausa del cartel
         sparks.length = 0; 
 
         stopAllSfx();
@@ -328,7 +334,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== GAME ENTITIES & SPAWNERS (sin cambios) ===== 
+    // ===== GAME ENTITIES & SPAWNERS ===== 
     const IMG = { fondos: {}, erizo: {}, obstaculos: [], banana: null, cuenco: null, nubes: [], contador: [], contadorGo: null, bossImgs: {}, bossCartels: {}, bossEspumas: {1:[],2:[],3:[]}, bonusPatitos: [], bonusBg: null, barraInhalacion: null, suelo: null };
 
     function initClouds(){ 
@@ -344,20 +350,41 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         } 
     }
 
+    // 3. & 4. Ajuste: spawnObstacle con lógica de posición aleatoria vertical
     function spawnObstacle(kind = 'paraguas', radius = 45) { 
-        if(kind === 'espuma') radius = 30 + Math.random() * 15; else if (kind === 'helado') radius = 50; 
-        const y_offset = (kind === 'espuma') ? Math.random() * (WORLD.h - GROUND_H - 2 * radius) : 0; 
+        let y_offset = 0;
+        let isFloating = false;
         let imgRef = IMG.obstaculos[0];
-        if(kind === 'helado') imgRef = IMG.obstaculos[1];
-        else if(kind === 'espuma') {
+        
+        if(kind === 'helado') {
+            imgRef = IMG.obstaculos[1];
+        } else if (kind === 'espuma') {
+            // 3. Ajuste: Proyectiles de Boss (Espumas/Lanzas)
+            radius = 30 + Math.random() * 15; 
+            isFloating = true; // Siempre flotan
+            y_offset = Math.random() * (WORLD.h - GROUND_H - 2 * radius); 
             const stageAssets = IMG.bossEspumas[bossStageIndex] || IMG.bossEspumas[1]; 
             imgRef = stageAssets[Math.floor(Math.random()*stageAssets.length)] || null;
+            
+        } else {
+            // 4. Ajuste: Obstáculos de fase normal (Paraguas o Helado) con probabilidad de flotar
+            if (Math.random() < 0.4) { // 40% de que flote
+                isFloating = true;
+                y_offset = Math.random() * (WORLD.h - GROUND_H - 2 * radius - 100); 
+            }
+        }
+        
+        // La posición Y se calcula: Altura del suelo - radio - offset
+        let yPos = WORLD.h - GROUND_H - radius;
+        if(isFloating) {
+             yPos = Math.max(radius + 50, radius + y_offset); // Asegura que no está demasiado cerca del techo
         }
 
-        obstacles.push({ x: WORLD.w + radius, y: WORLD.h - GROUND_H - radius + y_offset, r: radius, kind: kind, imgRef: imgRef }); 
+        obstacles.push({ x: WORLD.w + radius, y: yPos, r: radius, kind: kind, imgRef: imgRef }); 
     }
 
     function spawnCollectable(kind = 'banana', radius = 30) { 
+        // Se puede reutilizar la lógica de altura para que floten
         const height = WORLD.h - GROUND_H - radius * 2 - Math.random() * 400; 
         const speed_mult = (kind === 'cuenco') ? 1.5 : 1; 
         let itemRef = { x: WORLD.w + radius, y: Math.max(height, 100), r: radius, kind: kind, speedMult: speed_mult, points: (kind === 'cuenco' ? 5 : 1) };
@@ -378,11 +405,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         spawnCollectable(patitoType, 35); 
     }
     
-    // ===== BOSS/BONUS CONTROL (sin cambios) =====
+    // ===== BOSS/BONUS CONTROL =====
     function startBossPhase(stage=1, restart=false){ 
         if(stage > 3) stage = 3; 
         inBossPhase = true; inBonusPhase = false; bossActive = false; 
         bossTimer = 0;
+        // 9. Ajuste: Entrada de jefe (2.0s para que se vea el cartel)
         bossEntranceTimer = 2.0; 
         bossStageIndex = stage; 
         SPEED.scroll = BASE_SPEED_SCROLL; SPAWN.interval = BASE_SPAWN_INTERVAL; 
@@ -395,6 +423,11 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         else currentBg = IMG.fondos.zen_boss || currentBg; 
         
         if(musicEnabled) playMusic(MUSIC.boss); 
+        
+        // 9. Ajuste: El cartel se dibuja, pero el bossActive se activa después.
+        setTimeout(()=>{ 
+            if(inBossPhase) bossActive = true; 
+        }, bossEntranceTimer * 1000);
     } 
 
     function startBonusPhase(){ 
@@ -469,7 +502,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }, { once: true });
     }
 
-    // ===== GAME LOOP: UPDATE (sin cambios) ===== 
+    // ===== GAME LOOP: UPDATE (sin cambios en la estructura) ===== 
     function update(dt){ 
         if(!started || gameOver) return; 
         if(shakeDuration > 0) { shakeDuration -= dt; if(shakeDuration <= 0) { wrap.classList.remove('shake'); } }
@@ -477,16 +510,21 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         // Player Physics
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
+            // 5. Ajuste: Mayor fuerza para inhalar.
             player.vy += (PHYSICS.inhaleForce - PHYSICS.gravity) * dt; 
             CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
             hint.style.display = 'none';
         } else if (justReleased) {
             player.state = 'gritando'; 
+            // 6. Ajuste: Volumen de grito en playSfx (ya aplicado)
             playSfx('woosh'); 
             CHARGE.cooldown = CHARGE.cooldownBase; 
             justReleased = false;
-            const pulse_r = PULSE.base + (PULSE.max - PULSE.base) * (CHARGE.value / CHARGE.max);
-            pulses.push({ x: player.x, y: player.y, r: 0, maxR: pulse_r, life: PULSE.life }); 
+            
+            // 7. Ajuste: El radio máximo depende de la carga
+            const charge_pct = CHARGE.value / CHARGE.max;
+            const pulse_r = PULSE.base + (PULSE.max - PULSE.base) * charge_pct;
+            pulses.push({ x: player.x, y: player.y, r: 0, maxR: pulse_r, life: PULSE.life, charge: CHARGE.value }); 
             CHARGE.value = 0;
         } else { 
             player.state = 'calmado'; 
@@ -498,10 +536,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         player.y = Math.max(player.r, Math.min(WORLD.h - GROUND_H - player.r, player.y));
         player.vy = Math.min(PHYSICS.maxVy, player.vy);
 
-        // World Scroll
+        // World Scroll (sin cambios)
         if(!inBossPhase && !inBonusPhase){
             SPAWN.diffTimer += dt;
-            SPEED.scroll = Math.min(SPEED.max, BASE_SPEED_SCROLL + SPAWN.diffTimer * SPEED.inc); // FIX: Typo in SPAWN (SAAWN -> SPAWN)
+            SPEED.scroll = Math.min(SPEED.max, BASE_SPEED_SCROLL + SPAWN.diffTimer * SPEED.inc); 
             SPAWN.interval = Math.max(SPAWN.min, BASE_SPAWN_INTERVAL - SPAWN.diffTimer * 0.02);
         }
         const scroll_dx = SPEED.scroll * dt;
@@ -534,12 +572,13 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             SPAWN.timer += dt;
             if(SPAWN.timer >= SPAWN.interval){
                 SPAWN.timer = 0;
+                // 4. Ajuste: Más variedad de spawns en fase normal.
                 if(Math.random() < 0.6) spawnObstacle(Math.random() < 0.5 ? 'paraguas' : 'helado');
                 if(Math.random() < 0.4) spawnCollectable(Math.random() < 0.1 ? 'cuenco' : 'banana');
             }
         }
 
-        // Progression Check
+        // Progression Check (2. Ajuste: Puntuaciones ajustadas)
         if(!inBossPhase && !inBonusPhase){ 
             if(POINTS.total >= BOSS_SCORE_1 && !bossesDone.has(1)){ bossesDone.add(1); startBossPhase(1); } 
             else if(POINTS.total >= BONUS_SCORE_1 && !bonusDone.has(1)){ bonusDone.add(1); startBonusPhase(); } 
@@ -552,16 +591,33 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         // Collision & Boss/Bonus Logic
         for(let p=pulses.length-1; p>=0; p--){
             const pulse = pulses[p];
-            for(let i=obstacles.length-1; i>=0; i--){
-                const o = obstacles[i];
-                if(dist2(o.x, o.y, pulse.x, pulse.y) <= (o.r + pulse.r)*(o.r + pulse.r)){ 
-                    obstacles.splice(i, 1); POINTS.total += 1; playSfx('gong', 0.5); 
-                    spawnSparks(o.x, o.y, 8, '#ef4444');
+            // 7. Ajuste: Lógica de destrucción proporcional a la carga del pulso.
+            // Para destruir, el radio actual (pulse.r) debe estar cerca de alcanzar el máximo (pulse.maxR) 
+            // Y el maxR debe reflejar la carga (pulse.charge). Un 60% de carga es necesario para afectar más.
+            const minEffectiveRadius = PULSE.base + (PULSE.max - PULSE.base) * 0.40; // Mínimo 40% de carga para tener efecto.
+
+            if(pulse.maxR >= minEffectiveRadius && pulse.life > PULSE.life * 0.15){ // Solo pulsos con cierta fuerza tienen potencial
+                
+                const destroyRadius = pulse.maxR * (pulse.charge / CHARGE.max); // El radio máximo de destrucción efectivo.
+                
+                for(let i=obstacles.length-1; i>=0; i--){
+                    const o = obstacles[i];
+                    
+                    // La destrucción ocurre si el obstáculo está dentro del pulso Y el pulso ha crecido lo suficiente (pulse.r > r_min)
+                    if(dist2(o.x, o.y, pulse.x, pulse.y) <= (o.r + pulse.r)*(o.r + pulse.r)){ 
+                        
+                         // Para que sea "proporcional", si la onda es grande (pulse.r > destroyRadius * 0.7), destruye.
+                         // Esto asegura que la onda fuerte destruye pronto y la débil solo al expandirse completamente.
+                         if (pulse.r >= o.r + 10 || pulse.r >= destroyRadius * 0.7) { 
+                            obstacles.splice(i, 1); POINTS.total += 1; playSfx('gong', 0.5); 
+                            spawnSparks(o.x, o.y, 8, '#ef4444');
+                         }
+                    }
                 }
             }
         }
         
-        // Collision (Player vs Obstacles)
+        // Collision (Player vs Obstacles) (sin cambios)
         for(let i=obstacles.length-1;i>=0;i--){
             const o = obstacles[i];
             if(dist2(o.x,o.y,player.x,player.y) <= (o.r + player.r)*(o.r + player.r)){
@@ -572,7 +628,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // Collision (Player vs Collectables)
+        // Collision (Player vs Collectables) (sin cambios)
         for(let i=bananas.length-1;i>=0;i--){
             const b = bananas[i];
             if(dist2(b.x,b.y,player.x,player.y) <= (b.r + player.r)*(b.r + player.r)){
@@ -585,19 +641,21 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         
         // Boss Phase Logic
         if(inBossPhase){
+            // 9. Ajuste: Esperar a que el cartel desaparezca (timer < 0)
             if(bossEntranceTimer > 0){
                 bossEntranceTimer -= dt;
                 if(bossEntranceTimer < 1.0) { 
                     doShake(0.05); 
                 }
                 if(bossEntranceTimer <= 0){
-                    bossActive = true; 
-                    bossSpawnTimer = 0;
+                    bossEntranceTimer = 0;
+                    // bossActive es activado por el setTimeout en startBossPhase (2.0s)
                 }
             }
 
             if(bossActive){
                 bossTimer += dt; bossSpawnTimer += dt;
+                // 3. Ajuste: Lanzas de Bosses
                 if(bossSpawnTimer > 0.3){ spawnObstacle('espuma'); bossSpawnTimer = 0; }
                 if(bossTimer >= BOSS_DURATION){
                     bossActive = false; inBossPhase = false; fleetingFlash(); playSfx('level_complete', 0.7);
@@ -606,7 +664,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // Bonus Phase Logic
+        // Bonus Phase Logic (sin cambios)
         if(inBonusPhase){
             if(bonusActive){
                 bonusTimer += dt;
@@ -625,17 +683,17 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // UI Update
+        // UI Update (sin cambios)
         zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
         zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
         scoreEl.textContent = "Puntos: " + POINTS.total;
     } 
 
-    // ===== GAME LOOP: DRAW (sin cambios) ===== 
+    // ===== GAME LOOP: DRAW ===== 
     function draw(){ 
         ctx.clearRect(0,0,WORLD.w,WORLD.h); 
         
-        // Draw Background 
+        // Draw Background (sin cambios)
         if(currentBg && currentBg.complete) {
             ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
         } else {
@@ -643,15 +701,15 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             ctx.fillRect(0, 0, WORLD.w, WORLD.h);
         }
         
-        // Fade Overlay on Game Over
+        // Fade Overlay on Game Over (sin cambios)
         if(gameOver || gameComplete){ ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(0,0,WORLD.w,WORLD.h); } 
 
-        // Draw Clouds
+        // Draw Clouds (sin cambios)
         for(const c of CLOUD.list){
             if(c.imgRef && c.imgRef.complete){ const w = c.imgRef.width * c.scale; const h = c.imgRef.height * c.scale; ctx.drawImage(c.imgRef, c.x - w/2, c.y - h/2, w, h); }
         }
         
-        // Draw Collectables 
+        // Draw Collectables (sin cambios)
         for(const b of bananas){ 
             if(started && !gameOver && Math.random() < 0.3) {
                 spawnSparks(b.x, b.y, 1, '#6ee7b7'); 
@@ -664,19 +722,19 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             if(itemImg && itemImg.complete) ctx.drawImage(itemImg, b.x - b.r, b.y - b.r, b.r*2, b.r*2); 
         } 
         
-        // Draw Obstacles
+        // Draw Obstacles (sin cambios)
         for(const o of obstacles){ 
             ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; ctx.beginPath(); ctx.arc(o.x, o.y, o.r + 6, 0, Math.PI * 2); ctx.fill();
             let obsImg = o.imgRef;
             if(obsImg && obsImg.complete) ctx.drawImage(obsImg, o.x - o.r, o.y - o.r, o.r*2, o.r*2); 
         } 
         
-        // Draw Pulses
+        // Draw Pulses (sin cambios)
         for(const p of pulses){
             ctx.strokeStyle = `rgba(134, 239, 172, ${p.life / PULSE.life})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
         }
 
-        // Draw Ground
+        // Draw Ground (sin cambios)
         const groundH = WORLD.h - GROUND_H;
         if(IMG.suelo && IMG.suelo.complete){
             for(const s of sueloScroll){
@@ -686,7 +744,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
              ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
         }
         
-        // Draw Player (Erizo)
+        // Draw Player (Erizo) (sin cambios)
         let erizoImg = IMG.erizo.calmado; 
         if(player.state === 'inhalando') erizoImg = IMG.erizo.inhalando;
         else if(player.state === 'gritando') erizoImg = IMG.erizo.gritando; 
@@ -696,18 +754,22 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(erizoImg && erizoImg.complete) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2); 
         
         // Draw Boss/Bonus UI 
-        const BOSS_W = WORLD.w * 0.55; 
+        // 1. Ajuste: Dimensiones y posición del Boss.
         const BOSS_H = WORLD.h * 0.75; 
-        const BOSS_X_IDLE = WORLD.w - BOSS_W/2 - 50; 
+        const BOSS_W_DRAW = WORLD.w * 0.8; // Ancho para dibujar (ocupa 80% del ancho)
+        const BOSS_X_IDLE = WORLD.w - (BOSS_W_DRAW/2) + 100; // Posición final un poco a la derecha (fuera del centro).
         const BOSS_Y_IDLE = WORLD.h/2 - BOSS_H/2;
 
         if(inBossPhase){
             const cartelImg = IMG.bossCartels[bossStageIndex] || IMG.bossCartels[1];
+            
+            // 9. El cartel solo se dibuja mientras el timer es > 0
             if(bossEntranceTimer > 0 && cartelImg && cartelImg.complete){ 
                 // Draw Cartel
                 ctx.drawImage(cartelImg, WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); 
             }
             
+            // 9. El boss empieza a moverse si el timer está en su cuenta regresiva (o ya en activo).
             if(bossEntranceTimer < 2.0 || bossActive){ 
                 const bossImg = IMG.bossImgs[bossStageIndex] || IMG.bossImgs[1]; 
                 
@@ -721,13 +783,14 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                          bossX += vaiven;
                     } else {
                          // Entrada (movimiento desde la derecha)
+                         // 9. Ajuste: La entrada sigue el timer.
                          const progress = (2.0 - bossEntranceTimer) / 2.0; 
-                         const startX = WORLD.w + BOSS_W/2;
+                         const startX = WORLD.w + BOSS_W_DRAW/2;
                          bossX = startX + (BOSS_X_IDLE - startX) * Math.min(progress * 1.5, 1.0);
                     }
                     
-                    // Draw the boss
-                    ctx.drawImage(bossImg, bossX - BOSS_W/2, bossY, BOSS_W, BOSS_H);
+                    // 1. Ajuste: Dibujar el boss más grande y a la derecha (posiblemente fuera de pantalla)
+                    ctx.drawImage(bossImg, bossX - BOSS_W_DRAW/2, bossY, BOSS_W_DRAW, BOSS_H);
                     
                     // Red Sparks 
                     if(bossActive && Math.random() < 0.5) {
@@ -737,7 +800,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
         
-        // Draw Sparks
+        // Draw Sparks (sin cambios)
         for(const s of sparks){
             ctx.fillStyle = s.color;
             ctx.globalAlpha = s.life / s.maxLife; 
@@ -762,7 +825,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== INIT / START FLOW =====
+    // ===== INIT / START FLOW (sin cambios significativos) =====
     async function loadImage(src){ 
         return new Promise((resolve, reject)=>{ 
             const img = new Image(); 
@@ -833,8 +896,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
     btnStart.addEventListener('click', btnStartHandler); 
     
-    // 🟢 FIX: Mostrar el menú principal al terminar la carga
-    // Esto resuelve el problema de la pantalla negra al inicio.
+    // FIX: Mostrar el menú principal al terminar la carga
     menuPanel.classList.add('show'); 
 
     const COUNTDOWN_IMAGES = ASSETS.contador.slice();
@@ -891,7 +953,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         requestAnimationFrame(frame);
     });
 
-    // 🟢 TECLAS DE TESTEO (Completado)
+    // TECLAS DE TESTEO (Completado)
     window.addEventListener('keydown', (e)=>{ 
         if(!TEST_MODE) return; 
         const key = e.key.toLowerCase();
