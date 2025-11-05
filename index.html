@@ -104,7 +104,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
 <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div>
 
-<div class="panel show" id="menuPanel" role="dialog">
+<div class="panel" id="menuPanel" role="dialog">
 <div class="card">
 <img id="menuLogo" src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width:320px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;">
 <h2>ASTUTO ERIZO</h2>
@@ -409,6 +409,18 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         setTimeout(()=>{ bonusActive=true; }, 500); 
     } 
 
+    function fleetingFlash(){
+        flash.style.opacity = '1';
+        setTimeout(() => {
+            flash.style.opacity = '0';
+        }, 120);
+    }
+    
+    function doShake(duration = 0.45){
+        wrap.classList.add('shake');
+        shakeDuration = duration;
+    }
+
     function showEndScreen(){
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
@@ -457,7 +469,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }, { once: true });
     }
 
-    // ===== GAME LOOP: UPDATE (sin cambios relevantes en la lógica, solo el sonido) ===== 
+    // ===== GAME LOOP: UPDATE (sin cambios) ===== 
     function update(dt){ 
         if(!started || gameOver) return; 
         if(shakeDuration > 0) { shakeDuration -= dt; if(shakeDuration <= 0) { wrap.classList.remove('shake'); } }
@@ -489,7 +501,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         // World Scroll
         if(!inBossPhase && !inBonusPhase){
             SPAWN.diffTimer += dt;
-            SPEED.scroll = Math.min(SPEED.max, BASE_SPEED_SCROLL + SPAAWN.diffTimer * SPEED.inc);
+            SPEED.scroll = Math.min(SPEED.max, BASE_SPEED_SCROLL + SPAWN.diffTimer * SPEED.inc); // FIX: Typo in SPAWN (SAAWN -> SPAWN)
             SPAWN.interval = Math.max(SPAWN.min, BASE_SPAWN_INTERVAL - SPAWN.diffTimer * 0.02);
         }
         const scroll_dx = SPEED.scroll * dt;
@@ -750,7 +762,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== INIT / START FLOW (sin cambios) =====
+    // ===== INIT / START FLOW =====
     async function loadImage(src){ 
         return new Promise((resolve, reject)=>{ 
             const img = new Image(); 
@@ -820,6 +832,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     if(musicEnabled) playMusic(MUSIC.menu);
 
     btnStart.addEventListener('click', btnStartHandler); 
+    
+    // 🟢 FIX: Mostrar el menú principal al terminar la carga
+    // Esto resuelve el problema de la pantalla negra al inicio.
+    menuPanel.classList.add('show'); 
 
     const COUNTDOWN_IMAGES = ASSETS.contador.slice();
     function showMainCountdown(onDone){ 
