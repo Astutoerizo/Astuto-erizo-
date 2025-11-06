@@ -122,20 +122,20 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const TEST_MODE = true; 
     // ============================================== 
 
-    // ===== CONFIG ===== 
+    // ===== CONFIG (Solo se modifican PULSE.max) ===== 
     const WORLD = { w: 540, h: 960 };
     const BASE_SPEED_SCROLL = 280; 
     const BASE_SPAWN_INTERVAL = 1.2; 
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    const PULSE = { base: 80, max: 350, life: 0.25 }; 
+    const PULSE = { base: 80, max: 420, life: 0.25 }; // 3. Ajuste del Radio Máximo (más fuerza de grito)
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
     
-    // 1. AJUSTE DE FÍSICA: Caída en 1.0s (1340) y Subida en 1.7s (neto ~948.09)
+    // 1. AJUSTE DE FÍSICA: Caída en 1.0s (1340) y Subida en 2.2s (neto ~27.77)
     const PHYSICS = { 
-        gravity: 1340,     // Ajustada para caída en ~1.0s (desde el techo)
-        inhaleForce: -392, // Ajustada para subida en ~1.7s (desde el suelo con v0=-1200)
+        gravity: 1340,     // Mantiene la caída en ~1.0s
+        inhaleForce: -27,  // Ajustada para subida en ~2.2s
         maxVy: 900 
     }; 
     const GROUND_H = 180;
@@ -228,7 +228,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     };
 
-    // ===== ENTITIES & GAME STATE (sin cambios significativos) ===== 
+    // ===== ENTITIES & GAME STATE (sin cambios) ===== 
     const PLAYER_R = 55; 
     const player = { x: 100, y: WORLD.h - GROUND_H - PLAYER_R, r: PLAYER_R, state: 'calmado', vy:0, mareo:0 };
     const sueloScroll = [{ x:0 }, { x: WORLD.w }];
@@ -500,8 +500,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
             
-            // 1. Fix: Reacción Inmediata. Si está cayendo (vy > -500), dale un impulso instantáneo.
-            // **IMPORTANTE**: Mantener el impulso de -1200 para la reacción inmediata.
+            // 1. Reacción Inmediata. Si está cayendo (vy > -500), dale un impulso instantáneo.
             if (player.vy > -500) { 
                  player.vy = -1200; // Impulso inicial para reaccionar al toque
             }
@@ -610,9 +609,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                         
                         let shouldDestroy = false;
                         
+                        // 3. La destrucción ocurre si: 
+                        // a) Carga máxima Y el pulso ya superó el obstáculo.
                         if (isMaxCharge && pulse.r >= o.r + 5) { 
                             shouldDestroy = true;
                         } 
+                        // b) Carga normal Y el pulso está en su fase final (mayor potencia).
                         else if (!isMaxCharge) {
                             if (pulse.r >= pulse.maxR * 0.75) { 
                                  shouldDestroy = true;
@@ -917,7 +919,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown){ isDown=false; justReleased=true; e.preventDefault(); } 
     }); 
 
-    // **CORRECCIÓN REINICIO**: Asegurar que el bucle de juego se reanude al reiniciar
+    // **LÓGICA DE REINICIO REVISADA (FIX AL MORIR)**:
     btnRestart.addEventListener('click', ()=>{
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
@@ -937,7 +939,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(musicEnabled) playMusic(MUSIC.base); 
         lastFrame = performance.now();
         // **LÍNEA CRÍTICA AÑADIDA:** Reanudar el bucle del juego
-        requestAnimationFrame(frame);
+        loopId = requestAnimationFrame(frame); // Se asigna el nuevo ID al loopId
     });
 
     window.addEventListener('keydown', (e)=>{ 
@@ -967,7 +969,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         else if(key === 'r') {
             resetAll(); 
             lastFrame = performance.now(); 
-            requestAnimationFrame(frame); 
+            loopId = requestAnimationFrame(frame); 
         }
     });
     
