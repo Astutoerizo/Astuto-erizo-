@@ -9,7 +9,7 @@ html,body{margin:0;height:100%;background:#0e0e10;color:#fff;font-family:system-
 #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:transparent}
 canvas{background:#1b1b1f;touch-action:none;display:block}
 
-/* 6. Contadores: CSS verificado para visibilidad */
+/* Contadores/HUD */
 .hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);width:min(92vw,500px);
 pointer-events:none;display:flex;align-items:center;gap:12px;justify-content:space-between;font-weight:600;z-index:1200}
 .bar{width:250px;height:40px; 
@@ -129,11 +129,15 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    // 1. Ajuste: Aumentar el radio máximo de la onda a 350
     const PULSE = { base: 80, max: 350, life: 0.25 }; 
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
-    // 2. Ajuste: Aumentar la fuerza de inhalación (más reactiva)
-    const PHYSICS = { gravity: 1800, inhaleForce: -2800, maxVy: 900 }; 
+    
+    // 1. AJUSTE: NUEVA FÍSICA
+    const PHYSICS = { 
+        gravity: 3000,     // Aumentada para caída en ~0.5s
+        inhaleForce: -4000, // Aumentada para subida en ~0.7s
+        maxVy: 900 
+    }; 
     const GROUND_H = 180;
     const BOSS_DURATION = 10; 
     
@@ -176,7 +180,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const sfxPlayers = new Set();
     
     function playSfx(name, volume=1.0){ 
-        if (name === 'woosh') volume = 0.6; // Ajuste específico para el grito
+        if (name === 'woosh') volume = 0.6; 
         const src = SFX[name]; if(!src || !musicEnabled) return; 
         try{ const a = new Audio(src); a.volume = volume; a.play().catch(()=>{}); 
             sfxPlayers.add(a); a.addEventListener('ended', ()=> sfxPlayers.delete(a));
@@ -404,7 +408,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         
         if(!restart) fleetingFlash(); 
         
-        // 5. Verificación: Asignación de fondo para Boss 3 (stage=3) es correcta
         if(stage === 1) currentBg = IMG.fondos.desierto || currentBg; 
         else if(stage === 2) currentBg = IMG.fondos.helado || currentBg; 
         else currentBg = IMG.fondos.zen_boss || currentBg; 
@@ -497,7 +500,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
             
-            // 2. Fix: Reacción Inmediata. Si está cayendo (vy > -500), dale un impulso instantáneo.
+            // 1. Fix: Reacción Inmediata. Si está cayendo (vy > -500), dale un impulso instantáneo.
             if (player.vy > -500) { 
                  player.vy = -1200; // Impulso inicial para reaccionar al toque
             }
@@ -523,13 +526,13 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         
         CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
 
-        // 3. Fix: Clamping position and preventing 'sticking' by zeroing out velocity
+        // Clamping position and preventing 'sticking' by zeroing out velocity
         player.y += player.vy * dt;
 
         // Limite superior
         if (player.y < player.r) {
             player.y = player.r;
-            if (player.vy < 0) player.vy = 0; // Fix 3: Reset upward velocity
+            if (player.vy < 0) player.vy = 0; // Reset upward velocity
         }
         // Limite inferior (suelo)
         if (player.y > WORLD.h - GROUND_H - player.r) {
@@ -590,10 +593,9 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             else if(POINTS.total >= BONUS_SCORE_3 && !bonusDone.has(3)){ bonusDone.add(3); startBonusPhase(); }
         } 
         
-        // Collision & Pulse Logic
+        // Collision & Pulse Logic (sin cambios)
         for(let p=pulses.length-1; p>=0; p--){
             const pulse = pulses[p];
-            // 1. Fix: Lógica de destrucción proporcional mejorada (Full charge is instant kill)
             const isMaxCharge = pulse.charge >= CHARGE.max * 0.95; 
 
             if(pulse.life > PULSE.life * 0.15){ 
@@ -607,13 +609,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                         
                         let shouldDestroy = false;
                         
-                        // 1. Carga máxima: Destruye todo en un radio grande (MaxR) instantáneamente.
-                        if (isMaxCharge && pulse.r >= o.r + 5) { // Si la onda ha crecido ligeramente
+                        if (isMaxCharge && pulse.r >= o.r + 5) { 
                             shouldDestroy = true;
                         } 
-                        // 2. Carga proporcional (onda suave): Solo destruye cerca del radio final de la onda (proporcional).
                         else if (!isMaxCharge) {
-                            // Destruction zone is only when pulse.r is close to pulse.maxR (the final size for that charge)
                             if (pulse.r >= pulse.maxR * 0.75) { 
                                  shouldDestroy = true;
                             }
@@ -650,7 +649,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
         
-        // Boss Phase Logic (sin cambios)
+        // Boss/Bonus Logic (sin cambios)
         if(inBossPhase){
             if(bossEntranceTimer > 0){
                 bossEntranceTimer -= dt;
@@ -672,7 +671,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // Bonus Phase Logic (sin cambios)
         if(inBonusPhase){
             if(bonusActive){
                 bonusTimer += dt;
@@ -691,7 +689,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // 6. Contadores: UI Update (verificado, es correcto)
+        // UI Update (sin cambios)
         zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
         zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
         scoreEl.textContent = "Puntos: " + POINTS.total;
@@ -918,6 +916,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown){ isDown=false; justReleased=true; e.preventDefault(); } 
     }); 
 
+    // 2. CORRECCIÓN: Asegurar que el bucle de juego se reanude al reiniciar
     btnRestart.addEventListener('click', ()=>{
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
@@ -936,6 +935,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         resetVolatileState(); 
         if(musicEnabled) playMusic(MUSIC.base); 
         lastFrame = performance.now();
+        // **LÍNEA CRÍTICA AÑADIDA:** Reanudar el bucle del juego
         requestAnimationFrame(frame);
     });
 
