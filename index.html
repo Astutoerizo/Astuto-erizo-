@@ -132,10 +132,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const PULSE = { base: 80, max: 350, life: 0.25 }; 
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
     
-    // 1. AJUSTE: NUEVA FÍSICA
+    // 1. AJUSTE DE FÍSICA: Caída en 1.0s (1340) y Subida en 1.7s (neto ~948.09)
     const PHYSICS = { 
-        gravity: 3000,     // Aumentada para caída en ~0.5s
-        inhaleForce: -4000, // Aumentada para subida en ~0.7s
+        gravity: 1340,     // Ajustada para caída en ~1.0s (desde el techo)
+        inhaleForce: -392, // Ajustada para subida en ~1.7s (desde el suelo con v0=-1200)
         maxVy: 900 
     }; 
     const GROUND_H = 180;
@@ -501,12 +501,13 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             player.state = 'inhalando'; 
             
             // 1. Fix: Reacción Inmediata. Si está cayendo (vy > -500), dale un impulso instantáneo.
+            // **IMPORTANTE**: Mantener el impulso de -1200 para la reacción inmediata.
             if (player.vy > -500) { 
                  player.vy = -1200; // Impulso inicial para reaccionar al toque
             }
             
-            // Aceleración continua hacia arriba
-            player.vy += (PHYSICS.inhaleForce - PHYSICS.gravity) * dt; 
+            // Aceleración continua hacia arriba (gravedad + fuerza de inhalación)
+            player.vy += (PHYSICS.inhaleForce + PHYSICS.gravity) * dt; 
             CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
             hint.style.display = 'none';
         } else if (justReleased) {
@@ -521,7 +522,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             CHARGE.value = 0;
         } else { 
             player.state = 'calmado'; 
-            player.vy += PHYSICS.gravity * dt; 
+            player.vy += PHYSICS.gravity * dt; // Sólo gravedad
         }
         
         CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
@@ -529,7 +530,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         // Clamping position and preventing 'sticking' by zeroing out velocity
         player.y += player.vy * dt;
 
-        // Limite superior
+        // Limite superior (techo)
         if (player.y < player.r) {
             player.y = player.r;
             if (player.vy < 0) player.vy = 0; // Reset upward velocity
@@ -916,7 +917,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown){ isDown=false; justReleased=true; e.preventDefault(); } 
     }); 
 
-    // 2. CORRECCIÓN: Asegurar que el bucle de juego se reanude al reiniciar
+    // **CORRECCIÓN REINICIO**: Asegurar que el bucle de juego se reanude al reiniciar
     btnRestart.addEventListener('click', ()=>{
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
