@@ -129,13 +129,14 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    const PULSE = { base: 80, max: 450, life: 0.25 }; 
+    // 🟢 FIX 2: Aumento de alcance/radio máximo del grito para más potencia
+    const PULSE = { base: 80, max: 550, life: 0.25 }; 
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
     
     // FÍSICA AJUSTADA (Corregido el fallo de subir vs. caer)
     const PHYSICS = { 
         gravity: 1340,     
-        inhaleForce: -2000, // AJUSTE: Fuerza de elevación mayor a la gravedad para subir (Net Accel: -660)
+        inhaleForce: -2000, 
         maxVy: 900 
     }; 
     const GROUND_H = 180;
@@ -247,6 +248,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let bossEntranceTimer = 2.0; 
     let isDown=false, justReleased=false;
     
+    // 🟢 FIX 3: Estado de la fase al morir para reintentar en el mismo sitio
+    let lastPhaseState = { inBossPhase: false, inBonusPhase: false, bossStageIndex: 1, bossesDone: new Set(), bonusDone: new Set() };
+
+
     // ===== UTILITIES (sin cambios) =====
     let scale=1, offsetX=0, offsetY=0; 
     function fit(){ 
@@ -290,12 +295,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         panel.classList.remove('show'); hint.style.display = '';
         
         gameOver = false;
+        // Solo resetear las banderas de fase aquí. La lógica de re-entrada la maneja btnRestart.
         inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
         bossTimer = 0; bonusTimer = 0; 
         bossEntranceTimer = 2.0; 
         sparks.length = 0; 
         
-        // 🟢 FIX 2: Resetear el fondo al default al morir (independientemente de la fase)
         currentBg = IMG.fondos.calc || null; 
 
         stopAllSfx();
@@ -305,18 +310,17 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         erizoZenEl.style.display = 'none'; 
         gameComplete = false;
 
-        // FIX de Reinicio limpio del input
         isDown = false;
         justReleased = false;
     }
 
     function resetAll(){ 
         resetVolatileState();
+        // Reset de la progresión para un juego nuevo.
         bossesDone.clear();
         bonusDone.clear();
-        // currentBg ya se inicializa en resetVolatileState
-        initClouds();
         bossStageIndex = 1;
+        initClouds();
     }
     
     function spawnSparks(x, y, count, color = '#6ee7b7'){
@@ -401,7 +405,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         spawnCollectable(patitoType, 35); 
     }
     
-    // ===== BOSS/BONUS CONTROL (sin cambios) =====
+    // ===== BOSS/BONUS CONTROL (sin cambios significativos en la lógica de fase) =====
+    // 🟢 FIX 1: Eliminar el '|| currentBg' para asegurar la carga del fondo correcto.
     function startBossPhase(stage=1, restart=false){ 
         if(stage > 3) stage = 3; 
         inBossPhase = true; inBonusPhase = false; bossActive = false; 
@@ -413,9 +418,9 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         
         if(!restart) fleetingFlash(); 
         
-        if(stage === 1) currentBg = IMG.fondos.desierto || currentBg; 
-        else if(stage === 2) currentBg = IMG.fondos.helado || currentBg; 
-        else currentBg = IMG.fondos.zen_boss || currentBg; 
+        if(stage === 1) currentBg = IMG.fondos.desierto; 
+        else if(stage === 2) currentBg = IMG.fondos.helado; 
+        else currentBg = IMG.fondos.zen_boss; 
         
         if(musicEnabled) playMusic(MUSIC.boss); 
         
@@ -424,13 +429,16 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }, bossEntranceTimer * 1000);
     } 
 
-    function startBonusPhase(){ 
+    // 🟢 FIX 1 y 3: Añadir 'restart' como argumento y asegurar la carga del fondo.
+    function startBonusPhase(restart=false){ 
         inBonusPhase = true; inBossPhase = false; bonusActive = false; 
         bonusTimer = 0; 
         SPEED.scroll = BASE_SPEED_SCROLL; SPAWN.interval = BASE_SPAWN_INTERVAL; 
         obstacles.length = 0; bananas.length = 0; pulses.length = 0; 
-        fleetingFlash(); 
-        currentBg = IMG.fondos.bonus || currentBg; 
+        
+        if(!restart) fleetingFlash(); 
+        
+        currentBg = IMG.fondos.bonus; 
         
         if(musicEnabled) playMusic(MUSIC.bonus); 
         setTimeout(()=>{ bonusActive=true; }, 500); 
@@ -505,12 +513,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
             
-            // 🟢 FIX 1: Impulso inicial suave para respuesta inmediata, sin subir demasiado rápido
-            if (player.vy > -400) { // Menor impulso inicial (-400)
+            // Impulso inicial suave para respuesta inmediata, sin subir demasiado rápido
+            if (player.vy > -400) { 
                  player.vy = -400; 
             }
             
-            // Aceleración continua (controlada por los nuevos valores de PHYSICS)
+            // Aceleración continua 
             player.vy += (PHYSICS.inhaleForce + PHYSICS.gravity) * dt; 
             CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
             hint.style.display = 'none';
@@ -640,6 +648,14 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                 playSfx('chocar', 0.5); doShake();
                 if(POINTS.total > POINTS.best){ POINTS.best = POINTS.total; localStorage.setItem('bestScore', POINTS.best); updateBestDisplays(); }
                 panelMsg.textContent = ["El erizo se quedó sin aire…","Has gritado al vacío. El vacío gritó de vuelta.","La serenidad se tropezó contigo."][Math.floor(Math.random()*3)];
+                
+                // 🟢 FIX 3: Guardar el estado de la fase al morir
+                lastPhaseState.inBossPhase = inBossPhase;
+                lastPhaseState.inBonusPhase = inBonusPhase;
+                lastPhaseState.bossStageIndex = bossStageIndex;
+                lastPhaseState.bossesDone = new Set(bossesDone); 
+                lastPhaseState.bonusDone = new Set(bonusDone); 
+                
                 panel.classList.add('show'); gameOver = true; stopAllSfx(); cancelAnimationFrame(loopId); return;
             }
         }
@@ -705,6 +721,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     function draw(){ 
         ctx.clearRect(0,0,WORLD.w,WORLD.h); 
         
+        // El currentBg se establece en startBossPhase/startBonusPhase o en resetVolatileState
         if(currentBg && currentBg.complete) {
             ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
         } else {
@@ -922,7 +939,15 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown){ isDown=false; justReleased=true; e.preventDefault(); } 
     }); 
 
-    // LÓGICA DE REINICIO CORREGIDA:
+    function restoreProgression(state) {
+        bossesDone.clear();
+        state.bossesDone.forEach(id => bossesDone.add(id));
+        bonusDone.clear();
+        state.bonusDone.forEach(id => bonusDone.add(id));
+        bossStageIndex = state.bossStageIndex;
+    }
+    
+    // 🟢 FIX 3: Lógica de Reinicio para volver a la fase anterior
     btnRestart.addEventListener('click', ()=>{
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
@@ -938,11 +963,37 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
              return;
         }
 
-        // 💡 FIX 2: resetVolatileState ahora restablece el fondo.
+        // 1. Resetear el estado de la partida (sin progreso general)
         resetVolatileState(); 
-        if(musicEnabled) playMusic(MUSIC.base); 
+        
+        let shouldPlayBaseMusic = true;
+
+        // 2. Comprobar si se estaba en una fase especial y re-entrar
+        if (lastPhaseState.inBossPhase || lastPhaseState.inBonusPhase) {
+            restoreProgression(lastPhaseState);
+            
+            if (lastPhaseState.inBossPhase) {
+                // Re-entrar en la fase de Boss, con 'restart=true' para evitar el flash
+                startBossPhase(lastPhaseState.bossStageIndex, true); 
+                shouldPlayBaseMusic = false;
+            } else if (lastPhaseState.inBonusPhase) {
+                // Re-entrar en la fase Bonus, con 'restart=true'
+                startBonusPhase(true); 
+                shouldPlayBaseMusic = false;
+            }
+            
+        } else {
+            // Muerte en fase normal. Resetear la progresión para un nuevo intento
+            bossesDone.clear();
+            bonusDone.clear();
+            bossStageIndex = 1;
+        }
+        
+        if(musicEnabled && shouldPlayBaseMusic) {
+            playMusic(MUSIC.base); 
+        }
+        
         lastFrame = performance.now();
-        // Reanudar el bucle del juego.
         loopId = requestAnimationFrame(frame);
     });
 
