@@ -129,13 +129,13 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    const PULSE = { base: 80, max: 450, life: 0.25 }; // Fuerza de grito (Ajustado)
+    const PULSE = { base: 80, max: 450, life: 0.25 }; 
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
     
-    // AJUSTE DE FÍSICA: Subida en ~4.0s y Caída en ~1.0s
+    // FÍSICA AJUSTADA (Corregido el fallo de subir vs. caer)
     const PHYSICS = { 
         gravity: 1340,     
-        inhaleForce: -656,  
+        inhaleForce: -2000, // AJUSTE: Fuerza de elevación mayor a la gravedad para subir (Net Accel: -660)
         maxVy: 900 
     }; 
     const GROUND_H = 180;
@@ -149,7 +149,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const BOSS_SCORE_3 = TEST_MODE ? 25 : 300; 
     const BONUS_SCORE_3 = TEST_MODE ? 30 : 400; 
 
-    // ===== DOM ===== 
+    // ===== DOM (sin cambios) ===== 
     const canvas = document.getElementById('game'); 
     const ctx = canvas.getContext('2d');
     const wrap = document.getElementById('wrap'); 
@@ -171,7 +171,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const flash = document.getElementById('flash'); 
     const erizoZenEl = document.getElementById('erizoZen'); 
 
-    // ===== AUDIO ===== 
+    // ===== AUDIO (sin cambios) ===== 
     const SFX = { bowl: 'assets/sonido_bowl_limpio.mp3', banana: 'assets/sonido_recolectar_platano.mp3', inhale: 'assets/sonido_inhalar.mp3', chocar: 'assets/sonido_chocar.mp3', woosh: 'assets/grito.mp3', gong: 'assets/gong.mp3', level_complete: 'assets/level_complete.mp3' };
     const MUSIC_PATHS = { menu: 'assets/musica_pantalla_principal.mp3', base: 'assets/musica_base.mp3', bonus: 'assets/musica_bonus.mp3', boss: 'assets/musica_boss.mp3' };
     const MUSIC = {};
@@ -228,7 +228,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     };
 
-    // ===== ENTITIES & GAME STATE ===== 
+    // ===== ENTITIES & GAME STATE (sin cambios) ===== 
     const PLAYER_R = 55; 
     const player = { x: 100, y: WORLD.h - GROUND_H - PLAYER_R, r: PLAYER_R, state: 'calmado', vy:0, mareo:0 };
     const sueloScroll = [{ x:0 }, { x: WORLD.w }];
@@ -247,7 +247,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let bossEntranceTimer = 2.0; 
     let isDown=false, justReleased=false;
     
-    // ===== UTILITIES =====
+    // ===== UTILITIES (sin cambios) =====
     let scale=1, offsetX=0, offsetY=0; 
     function fit(){ 
         const w=WORLD.w, h=WORLD.h;
@@ -294,6 +294,9 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         bossTimer = 0; bonusTimer = 0; 
         bossEntranceTimer = 2.0; 
         sparks.length = 0; 
+        
+        // 🟢 FIX 2: Resetear el fondo al default al morir (independientemente de la fase)
+        currentBg = IMG.fondos.calc || null; 
 
         stopAllSfx();
         stopMusic(); 
@@ -301,8 +304,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         btnRestart.textContent = 'Reintentar';
         erizoZenEl.style.display = 'none'; 
         gameComplete = false;
-        
-        // 🟢 FIX DE REINICIO: Asegurar que el estado de entrada está limpio
+
+        // FIX de Reinicio limpio del input
         isDown = false;
         justReleased = false;
     }
@@ -311,7 +314,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         resetVolatileState();
         bossesDone.clear();
         bonusDone.clear();
-        currentBg = IMG.fondos.calc || null;
+        // currentBg ya se inicializa en resetVolatileState
         initClouds();
         bossStageIndex = 1;
     }
@@ -502,12 +505,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
             
-            // 🟢 FIX DE ARRANQUE: Impulso inicial fuerte para reaccionar al toque inmediatamente.
-            if (player.vy > -1200) { 
-                 player.vy = -1200; 
+            // 🟢 FIX 1: Impulso inicial suave para respuesta inmediata, sin subir demasiado rápido
+            if (player.vy > -400) { // Menor impulso inicial (-400)
+                 player.vy = -400; 
             }
             
-            // Aceleración continua hacia arriba (gravedad + fuerza de inhalación)
+            // Aceleración continua (controlada por los nuevos valores de PHYSICS)
             player.vy += (PHYSICS.inhaleForce + PHYSICS.gravity) * dt; 
             CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
             hint.style.display = 'none';
@@ -698,7 +701,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         scoreEl.textContent = "Puntos: " + POINTS.total;
     } 
 
-    // ===== GAME LOOP: DRAW ===== 
+    // ===== GAME LOOP: DRAW (sin cambios) ===== 
     function draw(){ 
         ctx.clearRect(0,0,WORLD.w,WORLD.h); 
         
@@ -801,7 +804,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     } 
     
-    // ===== GAME LOOP: FRAME =====
+    // ===== GAME LOOP: FRAME (sin cambios) =====
     function frame(now) {
         if (gameOver || gameComplete) return;
         const dt = Math.min((now - lastFrame) / 1000, 1/30); 
@@ -815,7 +818,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== INIT / START FLOW =====
+    // ===== INIT / START FLOW (sin cambios) =====
     async function loadImage(src){ 
         return new Promise((resolve, reject)=>{ 
             const img = new Image(); 
@@ -919,7 +922,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown){ isDown=false; justReleased=true; e.preventDefault(); } 
     }); 
 
-    // LÓGICA DE REINICIO REVISADA (FIX AL MORIR):
+    // LÓGICA DE REINICIO CORREGIDA:
     btnRestart.addEventListener('click', ()=>{
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
@@ -935,6 +938,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
              return;
         }
 
+        // 💡 FIX 2: resetVolatileState ahora restablece el fondo.
         resetVolatileState(); 
         if(musicEnabled) playMusic(MUSIC.base); 
         lastFrame = performance.now();
