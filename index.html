@@ -12,12 +12,15 @@ canvas{background:#1b1b1f;touch-action:none;display:block}
 /* Contadores/HUD */
 .hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);width:min(92vw,500px);
 pointer-events:none;display:flex;align-items:center;gap:12px;justify-content:space-between;font-weight:600;z-index:1200}
+/* 🟢 FIX 5: Estilo de la barra de inhalación sin imagen de fondo */
 .bar{width:250px;height:40px; 
-background:transparent;border-radius:999px;overflow:hidden;
-border:none;box-shadow:none;
+background:#24242a; 
+border-radius:999px;overflow:hidden;
+border:2px solid #6ee7b7; /* Borde sencillo */
+box-shadow:none;
 position:relative;
 }
-.bar-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1}
+/* .bar-img eliminado */
 .fill{height:100%;width:0%;background:#86efac;transition:width .08s linear;border-radius:999px;position:absolute;top:0;left:0;z-index:2}
 .cooldown .fill{background:rgba(239, 68, 68, 0.6);}
 .score{min-width:80px;text-align:center;color:#fff}
@@ -80,7 +83,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 <div class="hud">
 <div class="score" id="score">Puntos: 0</div>
 <div class="bar" aria-hidden="true">
-<img class="bar-img" src="assets/contador.png" alt="Barra de inhalación">
 <div class="fill" id="zenFill"></div>
 </div>
 <div class="score" id="bestScore">Mejor: 0</div>
@@ -129,9 +131,15 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    // 🟢 FIX 2: Aumento de alcance/radio máximo del grito para más potencia
     const PULSE = { base: 80, max: 550, life: 0.25 }; 
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
+    
+    // 🟢 FIX 1: Constantes para la aceleración del spawn de bosses
+    const BOSS_SPAWN = { 
+        intervalBase: 0.6, // Intervalo inicial para Boss 1 y 2 (Spawn más lento)
+        intervalMaxSpeed: 0.3, // Intervalo fijo para Boss 3 (Spawn rápido)
+        speedUpRate: 0.04 // Cuánto se acelera por segundo (para Boss 1 y 2)
+    };
     
     // FÍSICA AJUSTADA (Corregido el fallo de subir vs. caer)
     const PHYSICS = { 
@@ -145,7 +153,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     // Puntuaciones
     const BOSS_SCORE_1 = TEST_MODE ? 5 : 50; 
     const BONUS_SCORE_1 = TEST_MODE ? 10 : 75; 
-    const BOSS_SCORE_2 = TEST_MODE ? 15 : 150; 
+    const BOSS_SCORE_2 = TEST_MODE ? 15 : 250; // 🟢 FIX 2: 250 puntos para Boss 2
     const BONUS_SCORE_2 = TEST_MODE ? 20 : 225; 
     const BOSS_SCORE_3 = TEST_MODE ? 25 : 300; 
     const BONUS_SCORE_3 = TEST_MODE ? 30 : 400; 
@@ -210,7 +218,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         } 
     }); 
 
-    // ===== ASSETS PATHS (sin cambios) =====
+    // ===== ASSETS PATHS (sin cambios significativos, solo eliminando contador.png) =====
     const ASSETS = { 
         loader: ['assets/loader.png', 'assets/loader1.png', 'assets/loader2.png', 'assets/loader3.png'],
         fondos: { calc: 'assets/fondo_calc.png', desierto: 'assets/fondo_desierto.png', helado: 'assets/fondo_helado.png', zen_boss: 'assets/fondo_zen_boss.png', bonus: 'assets/bonus/fondo_bonus.png' }, 
@@ -219,7 +227,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         banana: 'assets/platano_puntos.png', cuenco: 'assets/cuenco_tibetano.png', 
         nubes: ['assets/nubes/nube1.png','assets/nubes/nube2.png','assets/nubes/nube3.png','assets/nubes/nube4.png'], 
         contador: ['assets/contador_arbol.png','assets/contador_calcetin.png','assets/contador_leche.png','assets/contador_cuenco.png','assets/contador_antena.png','assets/contador_seta.png','assets/contador_coche.png','assets/contador_lapiz.png','assets/contador_paraguas.png','assets/contador_helado.png'], 
-        contadorGo: 'assets/contador_go.png', barraInhalacion: 'assets/contador.png',
+        contadorGo: 'assets/contador_go.png', 
+        // barraInhalacion: 'assets/contador.png', // 🟢 FIX 5: Eliminado
         boss1: { img: 'assets/boss/pasta_feroz.png', cartel: 'assets/boss/cuidado_espuma.png', lanzas: ['assets/boss/espuma_boss.png','assets/boss/espuma_boss1.png'] }, 
         boss2: { img: 'assets/boss2/boss2.png', cartel: 'assets/boss2/cartel_boss2.png', lanzas: ['assets/boss2/lanza_boss2.png','assets/boss2/lanza_boss2a.png'] },
         boss3: { img: 'assets/boss3/boss3.png', cartel: 'assets/boss3/cartel_boss3.png', lanzas: ['assets/boss3/lanza_boss3.png','assets/boss3/lanza_boss3a.png'] },
@@ -248,7 +257,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let bossEntranceTimer = 2.0; 
     let isDown=false, justReleased=false;
     
-    // 🟢 FIX 3: Estado de la fase al morir para reintentar en el mismo sitio
     let lastPhaseState = { inBossPhase: false, inBonusPhase: false, bossStageIndex: 1, bossesDone: new Set(), bonusDone: new Set() };
 
 
@@ -295,9 +303,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         panel.classList.remove('show'); hint.style.display = '';
         
         gameOver = false;
-        // Solo resetear las banderas de fase aquí. La lógica de re-entrada la maneja btnRestart.
         inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
-        bossTimer = 0; bonusTimer = 0; 
+        bossTimer = 0; bonusTimer = 0; bossSpawnTimer = 0; // Reset boss spawn timer
         bossEntranceTimer = 2.0; 
         sparks.length = 0; 
         
@@ -316,7 +323,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
     function resetAll(){ 
         resetVolatileState();
-        // Reset de la progresión para un juego nuevo.
         bossesDone.clear();
         bonusDone.clear();
         bossStageIndex = 1;
@@ -340,7 +346,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    const IMG = { fondos: {}, erizo: {}, obstaculos: [], banana: null, cuenco: null, nubes: [], contador: [], contadorGo: null, bossImgs: {}, bossCartels: {}, bossEspumas: {1:[],2:[],3:[]}, bonusPatitos: [], bonusBg: null, barraInhalacion: null, suelo: null };
+    const IMG = { fondos: {}, erizo: {}, obstaculos: [], banana: null, cuenco: null, nubes: [], contador: [], contadorGo: null, bossImgs: {}, bossCartels: {}, bossEspumas: {1:[],2:[],3:[]} }; // IMG.barraInhalacion eliminado
 
     function initClouds(){ 
         CLOUD.list.length = 0; 
@@ -405,15 +411,23 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         spawnCollectable(patitoType, 35); 
     }
     
-    // ===== BOSS/BONUS CONTROL (sin cambios significativos en la lógica de fase) =====
-    // 🟢 FIX 1: Eliminar el '|| currentBg' para asegurar la carga del fondo correcto.
+    // ===== BOSS/BONUS CONTROL =====
     function startBossPhase(stage=1, restart=false){ 
         if(stage > 3) stage = 3; 
         inBossPhase = true; inBonusPhase = false; bossActive = false; 
         bossTimer = 0;
+        bossSpawnTimer = 0; // Asegurar reset
         bossEntranceTimer = 2.0; 
         bossStageIndex = stage; 
-        SPEED.scroll = BASE_SPEED_SCROLL; SPAWN.interval = BASE_SPAWN_INTERVAL; 
+        
+        // 🟢 FIX 1: Establecer el intervalo de spawn inicial
+        if(stage === 1 || stage === 2) {
+            SPAWN.interval = BOSS_SPAWN.intervalBase;
+        } else {
+            SPAWN.interval = BOSS_SPAWN.intervalMaxSpeed;
+        }
+        
+        SPEED.scroll = BASE_SPEED_SCROLL; 
         obstacles.length = 0; bananas.length = 0; pulses.length = 0; 
         
         if(!restart) fleetingFlash(); 
@@ -429,11 +443,11 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }, bossEntranceTimer * 1000);
     } 
 
-    // 🟢 FIX 1 y 3: Añadir 'restart' como argumento y asegurar la carga del fondo.
     function startBonusPhase(restart=false){ 
         inBonusPhase = true; inBossPhase = false; bonusActive = false; 
         bonusTimer = 0; 
-        SPEED.scroll = BASE_SPEED_SCROLL; SPAWN.interval = BASE_SPAWN_INTERVAL; 
+        SPAWN.interval = 0.3; // Spawn rápido
+        SPEED.scroll = BASE_SPEED_SCROLL; 
         obstacles.length = 0; bananas.length = 0; pulses.length = 0; 
         
         if(!restart) fleetingFlash(); 
@@ -513,12 +527,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
             
-            // Impulso inicial suave para respuesta inmediata, sin subir demasiado rápido
             if (player.vy > -400) { 
                  player.vy = -400; 
             }
             
-            // Aceleración continua 
             player.vy += (PHYSICS.inhaleForce + PHYSICS.gravity) * dt; 
             CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
             hint.style.display = 'none';
@@ -534,23 +546,20 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             CHARGE.value = 0;
         } else { 
             player.state = 'calmado'; 
-            player.vy += PHYSICS.gravity * dt; // Sólo gravedad
+            player.vy += PHYSICS.gravity * dt; 
         }
         
         CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
 
-        // Clamping position and preventing 'sticking' by zeroing out velocity
         player.y += player.vy * dt;
 
-        // Limite superior (techo)
         if (player.y < player.r) {
             player.y = player.r;
-            if (player.vy < 0) player.vy = 0; // Reset upward velocity
+            if (player.vy < 0) player.vy = 0; 
         }
-        // Limite inferior (suelo)
         if (player.y > WORLD.h - GROUND_H - player.r) {
             player.y = WORLD.h - GROUND_H - player.r;
-            if (player.vy > 0) player.vy = 0; // Reset downward velocity
+            if (player.vy > 0) player.vy = 0; 
         }
 
         player.vy = Math.min(PHYSICS.maxVy, player.vy);
@@ -600,7 +609,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(!inBossPhase && !inBonusPhase){ 
             if(POINTS.total >= BOSS_SCORE_1 && !bossesDone.has(1)){ bossesDone.add(1); startBossPhase(1); } 
             else if(POINTS.total >= BONUS_SCORE_1 && !bonusDone.has(1)){ bonusDone.add(1); startBonusPhase(); } 
-            else if(POINTS.total >= BOSS_SCORE_2 && !bossesDone.has(2)){ bossesDone.add(2); startBossPhase(2); } 
+            else if(POINTS.total >= BOSS_SCORE_2 && !bossesDone.has(2)){ bossesDone.add(2); startBossPhase(2); } // 🟢 FIX 2: Boss 2
             else if(POINTS.total >= BONUS_SCORE_2 && !bonusDone.has(2)){ bonusDone.add(2); startBonusPhase(); } 
             else if(POINTS.total >= BOSS_SCORE_3 && !bossesDone.has(3)){ bossesDone.add(3); startBossPhase(3); } 
             else if(POINTS.total >= BONUS_SCORE_3 && !bonusDone.has(3)){ bonusDone.add(3); startBonusPhase(); }
@@ -622,7 +631,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                         
                         let shouldDestroy = false;
                         
-                        // Destrucción lógica (sin cambios)
                         if (isMaxCharge && pulse.r >= o.r + 5) { 
                             shouldDestroy = true;
                         } 
@@ -649,7 +657,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                 if(POINTS.total > POINTS.best){ POINTS.best = POINTS.total; localStorage.setItem('bestScore', POINTS.best); updateBestDisplays(); }
                 panelMsg.textContent = ["El erizo se quedó sin aire…","Has gritado al vacío. El vacío gritó de vuelta.","La serenidad se tropezó contigo."][Math.floor(Math.random()*3)];
                 
-                // 🟢 FIX 3: Guardar el estado de la fase al morir
                 lastPhaseState.inBossPhase = inBossPhase;
                 lastPhaseState.inBonusPhase = inBonusPhase;
                 lastPhaseState.bossStageIndex = bossStageIndex;
@@ -684,8 +691,21 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
 
             if(bossActive){
-                bossTimer += dt; bossSpawnTimer += dt;
-                if(bossSpawnTimer > 0.3){ spawnObstacle('espuma'); bossSpawnTimer = 0; }
+                bossTimer += dt; 
+                
+                let currentBossSpawnInterval = BOSS_SPAWN.intervalMaxSpeed; // Default for Boss 3
+                
+                // 🟢 FIX 1: Spawn gradual para Boss 1 y 2
+                if(bossStageIndex === 1 || bossStageIndex === 2){
+                    currentBossSpawnInterval = Math.max(BOSS_SPAWN.intervalMaxSpeed, BOSS_SPAWN.intervalBase - bossTimer * BOSS_SPAWN.speedUpRate);
+                }
+
+                bossSpawnTimer += dt;
+                if(bossSpawnTimer > currentBossSpawnInterval){ 
+                    spawnObstacle('espuma'); 
+                    bossSpawnTimer = 0; 
+                }
+
                 if(bossTimer >= BOSS_DURATION){
                     bossActive = false; inBossPhase = false; fleetingFlash(); playSfx('level_complete', 0.7);
                     setTimeout(()=>{ currentBg = IMG.fondos.calc || currentBg; if(musicEnabled) playMusic(MUSIC.base); }, 350);
@@ -721,7 +741,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     function draw(){ 
         ctx.clearRect(0,0,WORLD.w,WORLD.h); 
         
-        // El currentBg se establece en startBossPhase/startBonusPhase o en resetVolatileState
         if(currentBg && currentBg.complete) {
             ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
         } else {
@@ -811,6 +830,36 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
         
+        // 🟢 FIX 4: Dibujar el contador de fase (Boss/Bonus)
+        if(inBossPhase || inBonusPhase){
+            const timer = inBossPhase ? bossTimer : bonusTimer;
+            const duration = BOSS_DURATION; 
+            const timeLeft = Math.max(0, duration - timer);
+            const timePct = (duration - timer) / duration;
+
+            const BAR_W = 100;
+            const BAR_H = 10;
+            const BAR_X = WORLD.w - BAR_W - 20;
+            const BAR_Y = 20;
+            
+            // Fondo
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(BAR_X, BAR_Y, BAR_W, BAR_H);
+            
+            // Relleno (Progresa de 100% a 0%)
+            ctx.fillStyle = '#6ee7b7'; 
+            ctx.fillRect(BAR_X, BAR_Y, BAR_W * timePct, BAR_H);
+            
+            // Texto
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(timeLeft.toFixed(1) + 's', BAR_X + BAR_W - 5, BAR_Y + BAR_H + 15);
+            
+            ctx.textAlign = 'left';
+            ctx.fillText(inBossPhase ? 'BOSS' : 'BONUS', BAR_X - 55, BAR_Y + BAR_H + 15);
+        }
+        
         for(const s of sparks){
             ctx.fillStyle = s.color;
             ctx.globalAlpha = s.life / s.maxLife; 
@@ -835,7 +884,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== INIT / START FLOW (sin cambios) =====
+    // ===== INIT / START FLOW (sin cambios en lógica de carga) =====
     async function loadImage(src){ 
         return new Promise((resolve, reject)=>{ 
             const img = new Image(); 
@@ -852,11 +901,19 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         const randomLoader = ASSETS.loader[Math.floor(Math.random() * ASSETS.loader.length)];
         loaderImg.src = randomLoader;
         
-        IMG.fondos.calc = await loadImage(ASSETS.fondos.calc); IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto); IMG.fondos.helado = await loadImage(ASSETS.fondos.helado); IMG.fondos.zen_boss = await loadImage(ASSETS.fondos.zen_boss);
-        IMG.erizo.calmado = await loadImage(ASSETS.erizo.calmado); IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando); IMG.erizo.gritando = await loadImage(ASSETS.erizo.gritando);
-        IMG.erizo.meditando = await loadImage(ASSETS.erizo.meditando); IMG.erizo.parpadeo = await loadImage(ASSETS.erizo.parpadeo);
+        IMG.fondos.calc = await loadImage(ASSETS.fondos.calc); 
+        IMG.fondos.desierto = await loadImage(ASSETS.fondos.desierto); 
+        IMG.fondos.helado = await loadImage(ASSETS.fondos.helado); 
+        IMG.fondos.zen_boss = await loadImage(ASSETS.fondos.zen_boss);
+        IMG.fondos.bonus = await loadImage(ASSETS.fondos.bonus); // 🟢 FIX 3: Carga correcta del fondo bonus
         
-        IMG.barraInhalacion = await loadImage(ASSETS.barraInhalacion);
+        IMG.erizo.calmado = await loadImage(ASSETS.erizo.calmado); 
+        IMG.erizo.inhalando = await loadImage(ASSETS.erizo.inhalando); 
+        IMG.erizo.gritando = await loadImage(ASSETS.erizo.gritando);
+        IMG.erizo.meditando = await loadImage(ASSETS.erizo.meditando); 
+        IMG.erizo.parpadeo = await loadImage(ASSETS.erizo.parpadeo);
+        
+        // IMG.barraInhalacion = await loadImage(ASSETS.barraInhalacion); // 🟢 FIX 5: Eliminado
         
         for(const s of ASSETS.obstaculos) IMG.obstaculos.push(await loadImage(s)); 
         IMG.banana = await loadImage(ASSETS.banana); IMG.cuenco = await loadImage(ASSETS.cuenco);
@@ -874,7 +931,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             for(const s of asset.lanzas) IMG.bossEspumas[i].push(await loadImage(s));
         }
         
-        IMG.bonusBg = await loadImage(ASSETS.bonus.bg); 
+        // IMG.bonusBg ya no es necesario si se carga en IMG.fondos.bonus
+        IMG.bonusPatitos = []; // Limpiar por si acaso
         IMG.bonusPatitos.push({img: await loadImage(ASSETS.bonus.patito1.img), points: ASSETS.bonus.patito1.points, kind: ASSETS.bonus.patito1.kind});
         IMG.bonusPatitos.push({img: await loadImage(ASSETS.bonus.patito2.img), points: ASSETS.bonus.patito2.points, kind: ASSETS.bonus.patito2.kind});
         
@@ -947,7 +1005,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         bossStageIndex = state.bossStageIndex;
     }
     
-    // 🟢 FIX 3: Lógica de Reinicio para volver a la fase anterior
     btnRestart.addEventListener('click', ()=>{
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
@@ -963,27 +1020,22 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
              return;
         }
 
-        // 1. Resetear el estado de la partida (sin progreso general)
         resetVolatileState(); 
         
         let shouldPlayBaseMusic = true;
 
-        // 2. Comprobar si se estaba en una fase especial y re-entrar
         if (lastPhaseState.inBossPhase || lastPhaseState.inBonusPhase) {
             restoreProgression(lastPhaseState);
             
             if (lastPhaseState.inBossPhase) {
-                // Re-entrar en la fase de Boss, con 'restart=true' para evitar el flash
                 startBossPhase(lastPhaseState.bossStageIndex, true); 
                 shouldPlayBaseMusic = false;
             } else if (lastPhaseState.inBonusPhase) {
-                // Re-entrar en la fase Bonus, con 'restart=true'
                 startBonusPhase(true); 
                 shouldPlayBaseMusic = false;
             }
             
         } else {
-            // Muerte en fase normal. Resetear la progresión para un nuevo intento
             bossesDone.clear();
             bonusDone.clear();
             bossStageIndex = 1;
@@ -1001,7 +1053,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(!TEST_MODE) return; 
         const key = e.key.toLowerCase();
         
-        // Auto-start game if menu is open
         if(!started) {
             if(key === 'j' || key === 'k' || key === 'l' || key === 'b' || key === 'n' || key === 'm' || key === ' ') btnStart.click();
             return;
