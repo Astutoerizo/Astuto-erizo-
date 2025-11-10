@@ -9,7 +9,7 @@ html,body{margin:0;height:100%;background:#0e0e10;color:#fff;font-family:system-
 #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:transparent}
 canvas{background:#1b1b1f;touch-action:none;display:block}
 
-/* 4. Barra de carga (HUD) ajustada */
+/* Contadores/HUD */
 .hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);width:min(92vw,500px);
 pointer-events:none;display:flex;align-items:center;gap:12px;justify-content:space-between;font-weight:600;z-index:1200}
 .bar{width:250px;height:40px; 
@@ -22,10 +22,8 @@ position:relative;
 .cooldown .fill{background:rgba(239, 68, 68, 0.6);}
 .score{min-width:80px;text-align:center;color:#fff}
 
-/* 4. Botón de música reposicionado para estar siempre visible en el HUD superior */
 .hud-btn{pointer-events:auto;cursor:pointer;padding:6px 10px;background:#24242a;border-radius:8px;font-size:14px;user-select:none;z-index:1500}
 
-/* 2. Estilos para el menú principal */
 #menuPanel .card h2:first-of-type {
 font-size: 2.2em;
 margin-bottom: 0;
@@ -43,7 +41,6 @@ color: #6ee7b7;
 .card{background:#1e1e24;border:1px solid #333;border-radius:16px;padding:20px;width:min(92vw,420px);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .btn{display:inline-block;margin-top:12px;padding:10px 16px;border-radius:12px;background:#6ee7b7;color:#0b0b0d;font-weight:700;cursor:pointer;user-select:none;pointer-events:auto}
 
-/* 3. Cuenta atrás más grande y sin texto */
 #countdown{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter: blur(2px);z-index:2000}
 #countdown.show{display:flex}
 #countdown #countNum{
@@ -58,7 +55,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
 @keyframes zoomIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
 
-/* 1. Loader con la animación suave */
 #loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0e0e10;z-index:3000}
 #loader img{max-width:220px;animation:float 1.8s ease-in-out infinite;display:block}
 #loader p{margin-top:12px;font-size:18px;color:#6ee7b7;font-weight:700;animation:blink 1.2s infinite}
@@ -68,7 +64,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 .shake{animation:shakeAnim .45s ease} @keyframes shakeAnim{0%{transform:none}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}100%{transform:none}}
 #flash{pointer-events:none;position:fixed;inset:0;background:#fff;opacity:0;transition:opacity .12s;z-index:2500}
 
-/* Estilo para el erizo flotante en la pantalla de Zen */
 @keyframes floatAnim{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 
 @media(max-width:420px){.card{width:92vw;padding:16px}.hud{top:6px;gap:8px}.score{min-width:80px;font-size:13px}}
@@ -104,7 +99,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
 <div class="toast" id="hint">Mantén pulsado para inhalar · Suelta para gritar</div>
 
-<div class="panel show" id="menuPanel" role="dialog">
+<div class="panel" id="menuPanel" role="dialog">
 <div class="card">
 <img id="menuLogo" src="assets/logo_videojuego.png" alt="Astuto Erizo" style="max-width:320px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;">
 <h2>ASTUTO ERIZO</h2>
@@ -134,19 +129,25 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const SPEED = { scroll: BASE_SPEED_SCROLL, inc: 20, max: 520, accel: 0 }; 
     const SPAWN = { interval: BASE_SPAWN_INTERVAL, min: 0.7, timer: 0, diffTimer: 0 }; 
     const CHARGE = { value: 0, rate: 60, max: 100, over: 85, cooldown: 0, cooldownBase: 1.0 };
-    const PULSE = { base: 120, max: 380, life: 0.25 };
+    const PULSE = { base: 80, max: 450, life: 0.25 }; // Fuerza de grito (Ajustado)
     const POINTS = { total: 0, best: parseInt(localStorage.getItem('bestScore')||'0', 10) || 0 };
-    const PHYSICS = { gravity: 1800, inhaleForce: -1800, maxVy: 900 }; 
+    
+    // AJUSTE DE FÍSICA: Subida en ~4.0s y Caída en ~1.0s
+    const PHYSICS = { 
+        gravity: 1340,     
+        inhaleForce: -656,  
+        maxVy: 900 
+    }; 
     const GROUND_H = 180;
     const BOSS_DURATION = 10; 
     
-    // Umbrales Progresivos 
+    // Puntuaciones
     const BOSS_SCORE_1 = TEST_MODE ? 5 : 50; 
     const BONUS_SCORE_1 = TEST_MODE ? 10 : 75; 
-    const BOSS_SCORE_2 = TEST_MODE ? 15 : 100;
-    const BONUS_SCORE_2 = TEST_MODE ? 20 : 125;
-    const BOSS_SCORE_3 = TEST_MODE ? 25 : 150;
-    const BONUS_SCORE_3 = TEST_MODE ? 30 : 200;
+    const BOSS_SCORE_2 = TEST_MODE ? 15 : 150; 
+    const BONUS_SCORE_2 = TEST_MODE ? 20 : 225; 
+    const BOSS_SCORE_3 = TEST_MODE ? 25 : 300; 
+    const BONUS_SCORE_3 = TEST_MODE ? 30 : 400; 
 
     // ===== DOM ===== 
     const canvas = document.getElementById('game'); 
@@ -179,6 +180,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     const sfxPlayers = new Set();
     
     function playSfx(name, volume=1.0){ 
+        if (name === 'woosh') volume = 0.6; 
         const src = SFX[name]; if(!src || !musicEnabled) return; 
         try{ const a = new Audio(src); a.volume = volume; a.play().catch(()=>{}); 
             sfxPlayers.add(a); a.addEventListener('ended', ()=> sfxPlayers.delete(a));
@@ -207,7 +209,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         } 
     }); 
 
-    // ===== ASSETS PATHS (Actualizado para Boss 2, Boss 3 y Patitos) =====
+    // ===== ASSETS PATHS (sin cambios) =====
     const ASSETS = { 
         loader: ['assets/loader.png', 'assets/loader1.png', 'assets/loader2.png', 'assets/loader3.png'],
         fondos: { calc: 'assets/fondo_calc.png', desierto: 'assets/fondo_desierto.png', helado: 'assets/fondo_helado.png', zen_boss: 'assets/fondo_zen_boss.png', bonus: 'assets/bonus/fondo_bonus.png' }, 
@@ -217,16 +219,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         nubes: ['assets/nubes/nube1.png','assets/nubes/nube2.png','assets/nubes/nube3.png','assets/nubes/nube4.png'], 
         contador: ['assets/contador_arbol.png','assets/contador_calcetin.png','assets/contador_leche.png','assets/contador_cuenco.png','assets/contador_antena.png','assets/contador_seta.png','assets/contador_coche.png','assets/contador_lapiz.png','assets/contador_paraguas.png','assets/contador_helado.png'], 
         contadorGo: 'assets/contador_go.png', barraInhalacion: 'assets/contador.png',
-        // Boss 1
         boss1: { img: 'assets/boss/pasta_feroz.png', cartel: 'assets/boss/cuidado_espuma.png', lanzas: ['assets/boss/espuma_boss.png','assets/boss/espuma_boss1.png'] }, 
-        // Boss 2
         boss2: { img: 'assets/boss2/boss2.png', cartel: 'assets/boss2/cartel_boss2.png', lanzas: ['assets/boss2/lanza_boss2.png','assets/boss2/lanza_boss2a.png'] },
-        // Boss 3
         boss3: { img: 'assets/boss3/boss3.png', cartel: 'assets/boss3/cartel_boss3.png', lanzas: ['assets/boss3/lanza_boss3.png','assets/boss3/lanza_boss3a.png'] },
-        // Patitos de bonus con puntuación
         bonus: { cartel: 'assets/bonus/coge_todo.png', bg: 'assets/bonus/fondo_bonus.png', 
-            patito1: { img: 'assets/patito1.png', points: 1, kind: 'patito1' }, // Gafas de sol (1 punto)
-            patito2: { img: 'assets/patito2.png', points: 3, kind: 'patito2' } // Cresta (3 puntos)
+            patito1: { img: 'assets/patito1.png', points: 1, kind: 'patito1' }, 
+            patito2: { img: 'assets/patito2.png', points: 3, kind: 'patito2' } 
         }
     };
 
@@ -246,10 +244,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     let lastFrame = performance.now();
     let shakeDuration = 0;
     let bossTimer = 0, bonusTimer = 0, bossSpawnTimer = 0;
-    let bossEntranceTimer = 0; 
+    let bossEntranceTimer = 2.0; 
     let isDown=false, justReleased=false;
     
-    // ===== UTILITIES (sin cambios) =====
+    // ===== UTILITIES =====
     let scale=1, offsetX=0, offsetY=0; 
     function fit(){ 
         const w=WORLD.w, h=WORLD.h;
@@ -294,7 +292,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         gameOver = false;
         inBossPhase = false; inBonusPhase = false; bossActive=false; bonusActive=false;
         bossTimer = 0; bonusTimer = 0; 
-        bossEntranceTimer = 0; 
+        bossEntranceTimer = 2.0; 
         sparks.length = 0; 
 
         stopAllSfx();
@@ -303,6 +301,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         btnRestart.textContent = 'Reintentar';
         erizoZenEl.style.display = 'none'; 
         gameComplete = false;
+        
+        // 🟢 FIX DE REINICIO: Asegurar que el estado de entrada está limpio
+        isDown = false;
+        justReleased = false;
     }
 
     function resetAll(){ 
@@ -314,7 +316,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         bossStageIndex = 1;
     }
     
-    // ===== PARTICLE SYSTEM (CHISPAS) (sin cambios) =====
     function spawnSparks(x, y, count, color = '#6ee7b7'){
         for(let i=0; i<count; i++){
             const angle = Math.random() * Math.PI * 2;
@@ -332,7 +333,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== GAME ENTITIES & SPAWNERS (sin cambios) ===== 
     const IMG = { fondos: {}, erizo: {}, obstaculos: [], banana: null, cuenco: null, nubes: [], contador: [], contadorGo: null, bossImgs: {}, bossCartels: {}, bossEspumas: {1:[],2:[],3:[]}, bonusPatitos: [], bonusBg: null, barraInhalacion: null, suelo: null };
 
     function initClouds(){ 
@@ -349,16 +349,32 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     }
 
     function spawnObstacle(kind = 'paraguas', radius = 45) { 
-        if(kind === 'espuma') radius = 30 + Math.random() * 15; else if (kind === 'helado') radius = 50; 
-        const y_offset = (kind === 'espuma') ? Math.random() * (WORLD.h - GROUND_H - 2 * radius) : 0; 
+        let y_offset = 0;
+        let isFloating = false;
         let imgRef = IMG.obstaculos[0];
-        if(kind === 'helado') imgRef = IMG.obstaculos[1];
-        else if(kind === 'espuma') {
+        
+        if(kind === 'helado') {
+            imgRef = IMG.obstaculos[1];
+        } else if (kind === 'espuma') {
+            radius = 30 + Math.random() * 15; 
+            isFloating = true; 
+            y_offset = Math.random() * (WORLD.h - GROUND_H - 2 * radius); 
             const stageAssets = IMG.bossEspumas[bossStageIndex] || IMG.bossEspumas[1]; 
             imgRef = stageAssets[Math.floor(Math.random()*stageAssets.length)] || null;
+            
+        } else {
+            if (Math.random() < 0.4) { 
+                isFloating = true;
+                y_offset = Math.random() * (WORLD.h - GROUND_H - 2 * radius - 100); 
+            }
+        }
+        
+        let yPos = WORLD.h - GROUND_H - radius;
+        if(isFloating) {
+             yPos = Math.max(radius + 50, radius + y_offset); 
         }
 
-        obstacles.push({ x: WORLD.w + radius, y: WORLD.h - GROUND_H - radius + y_offset, r: radius, kind: kind, imgRef: imgRef }); 
+        obstacles.push({ x: WORLD.w + radius, y: yPos, r: radius, kind: kind, imgRef: imgRef }); 
     }
 
     function spawnCollectable(kind = 'banana', radius = 30) { 
@@ -399,6 +415,10 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         else currentBg = IMG.fondos.zen_boss || currentBg; 
         
         if(musicEnabled) playMusic(MUSIC.boss); 
+        
+        setTimeout(()=>{ 
+            if(inBossPhase) bossActive = true; 
+        }, bossEntranceTimer * 1000);
     } 
 
     function startBonusPhase(){ 
@@ -412,6 +432,18 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(musicEnabled) playMusic(MUSIC.bonus); 
         setTimeout(()=>{ bonusActive=true; }, 500); 
     } 
+
+    function fleetingFlash(){
+        flash.style.opacity = '1';
+        setTimeout(() => {
+            flash.style.opacity = '0';
+        }, 120);
+    }
+    
+    function doShake(duration = 0.45){
+        wrap.classList.add('shake');
+        shakeDuration = duration;
+    }
 
     function showEndScreen(){
         if(POINTS.total > POINTS.best){ 
@@ -461,7 +493,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }, { once: true });
     }
 
-    // ===== GAME LOOP: UPDATE (actualizado el sonido del grito) ===== 
+    // ===== GAME LOOP: UPDATE (Física y Colisiones) ===== 
     function update(dt){ 
         if(!started || gameOver) return; 
         if(shakeDuration > 0) { shakeDuration -= dt; if(shakeDuration <= 0) { wrap.classList.remove('shake'); } }
@@ -469,36 +501,57 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         // Player Physics
         if(isDown && CHARGE.cooldown <= 0){
             player.state = 'inhalando'; 
-            player.vy += (PHYSICS.inhaleForce - PHYSICS.gravity) * dt; 
+            
+            // 🟢 FIX DE ARRANQUE: Impulso inicial fuerte para reaccionar al toque inmediatamente.
+            if (player.vy > -1200) { 
+                 player.vy = -1200; 
+            }
+            
+            // Aceleración continua hacia arriba (gravedad + fuerza de inhalación)
+            player.vy += (PHYSICS.inhaleForce + PHYSICS.gravity) * dt; 
             CHARGE.value = Math.min(CHARGE.max, CHARGE.value + CHARGE.rate * dt); 
             hint.style.display = 'none';
         } else if (justReleased) {
             player.state = 'gritando'; 
-            playSfx('woosh'); // 🟢 FIX 9: Añadido el nuevo grito
+            playSfx('woosh'); 
             CHARGE.cooldown = CHARGE.cooldownBase; 
             justReleased = false;
-            const pulse_r = PULSE.base + (PULSE.max - PULSE.base) * (CHARGE.value / CHARGE.max);
-            pulses.push({ x: player.x, y: player.y, r: 0, maxR: pulse_r, life: PULSE.life }); 
+            
+            const charge_pct = CHARGE.value / CHARGE.max;
+            const pulse_r = PULSE.base + (PULSE.max - PULSE.base) * charge_pct;
+            pulses.push({ x: player.x, y: player.y, r: 0, maxR: pulse_r, life: PULSE.life, charge: CHARGE.value }); 
             CHARGE.value = 0;
         } else { 
             player.state = 'calmado'; 
-            player.vy += PHYSICS.gravity * dt; 
+            player.vy += PHYSICS.gravity * dt; // Sólo gravedad
         }
         
         CHARGE.cooldown = Math.max(0, CHARGE.cooldown - dt);
+
+        // Clamping position and preventing 'sticking' by zeroing out velocity
         player.y += player.vy * dt;
-        player.y = Math.max(player.r, Math.min(WORLD.h - GROUND_H - player.r, player.y));
+
+        // Limite superior (techo)
+        if (player.y < player.r) {
+            player.y = player.r;
+            if (player.vy < 0) player.vy = 0; // Reset upward velocity
+        }
+        // Limite inferior (suelo)
+        if (player.y > WORLD.h - GROUND_H - player.r) {
+            player.y = WORLD.h - GROUND_H - player.r;
+            if (player.vy > 0) player.vy = 0; // Reset downward velocity
+        }
+
         player.vy = Math.min(PHYSICS.maxVy, player.vy);
 
         // World Scroll
         if(!inBossPhase && !inBonusPhase){
             SPAWN.diffTimer += dt;
-            SPEED.scroll = Math.min(SPEED.max, BASE_SPEED_SCROLL + SPAWN.diffTimer * SPEED.inc);
+            SPEED.scroll = Math.min(SPEED.max, BASE_SPEED_SCROLL + SPAWN.diffTimer * SPEED.inc); 
             SPAWN.interval = Math.max(SPAWN.min, BASE_SPAWN_INTERVAL - SPAWN.diffTimer * 0.02);
         }
         const scroll_dx = SPEED.scroll * dt;
         
-        // Move Clouds/Ground/Objects (sin cambios)
         for(let i=CLOUD.list.length-1; i>=0; i--){ 
             const cloud = CLOUD.list[i];
             cloud.x += cloud.vx * dt; 
@@ -522,7 +575,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             if(s.life <= 0) sparks.splice(i, 1);
         }
 
-        // Normal Spawn (sin cambios)
+        // Normal Spawn
         if(!inBossPhase && !inBonusPhase){
             SPAWN.timer += dt;
             if(SPAWN.timer >= SPAWN.interval){
@@ -532,30 +585,52 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // Progression Check (sin cambios)
+        // Progression Check
         if(!inBossPhase && !inBonusPhase){ 
             if(POINTS.total >= BOSS_SCORE_1 && !bossesDone.has(1)){ bossesDone.add(1); startBossPhase(1); } 
             else if(POINTS.total >= BONUS_SCORE_1 && !bonusDone.has(1)){ bonusDone.add(1); startBonusPhase(); } 
             else if(POINTS.total >= BOSS_SCORE_2 && !bossesDone.has(2)){ bossesDone.add(2); startBossPhase(2); } 
-            else if(POINTS.total >= BONUS_SCORE_3 && !bonusDone.has(2)){ bonusDone.add(2); startBonusPhase(); } 
+            else if(POINTS.total >= BONUS_SCORE_2 && !bonusDone.has(2)){ bonusDone.add(2); startBonusPhase(); } 
             else if(POINTS.total >= BOSS_SCORE_3 && !bossesDone.has(3)){ bossesDone.add(3); startBossPhase(3); } 
             else if(POINTS.total >= BONUS_SCORE_3 && !bonusDone.has(3)){ bonusDone.add(3); startBonusPhase(); }
         } 
         
-        // Collision & Boss/Bonus Logic (sin cambios)
+        // Collision & Pulse Logic
         for(let p=pulses.length-1; p>=0; p--){
             const pulse = pulses[p];
-            for(let i=obstacles.length-1; i>=0; i--){
-                const o = obstacles[i];
-                if(dist2(o.x, o.y, pulse.x, pulse.y) <= (o.r + pulse.r)*(o.r + pulse.r)){ 
-                    obstacles.splice(i, 1); POINTS.total += 1; playSfx('gong', 0.5); 
-                    // Genera chispas rojas para objetos de boss/obstáculos destruidos
-                    spawnSparks(o.x, o.y, 8, '#ef4444');
+            const isMaxCharge = pulse.charge >= CHARGE.max * 0.95; 
+
+            if(pulse.life > PULSE.life * 0.15){ 
+                
+                for(let i=obstacles.length-1; i>=0; i--){
+                    const o = obstacles[i];
+                    const distSq = dist2(o.x, o.y, pulse.x, pulse.y);
+                    const radiusSum = o.r + pulse.r;
+
+                    if(distSq <= radiusSum * radiusSum){ 
+                        
+                        let shouldDestroy = false;
+                        
+                        // Destrucción lógica (sin cambios)
+                        if (isMaxCharge && pulse.r >= o.r + 5) { 
+                            shouldDestroy = true;
+                        } 
+                        else if (!isMaxCharge) {
+                            if (pulse.r >= pulse.maxR * 0.75) { 
+                                 shouldDestroy = true;
+                            }
+                        }
+                        
+                        if (shouldDestroy) { 
+                            obstacles.splice(i, 1); POINTS.total += 1; playSfx('gong', 0.5); 
+                            spawnSparks(o.x, o.y, 8, '#ef4444');
+                        }
+                    }
                 }
             }
         }
         
-        // Collision (Player vs Obstacles) (sin cambios)
+        // Collision (Player vs Obstacles)
         for(let i=obstacles.length-1;i>=0;i--){
             const o = obstacles[i];
             if(dist2(o.x,o.y,player.x,player.y) <= (o.r + player.r)*(o.r + player.r)){
@@ -566,7 +641,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // Collision (Player vs Collectables) (sin cambios)
+        // Collision (Player vs Collectables)
         for(let i=bananas.length-1;i>=0;i--){
             const b = bananas[i];
             if(dist2(b.x,b.y,player.x,player.y) <= (b.r + player.r)*(b.r + player.r)){
@@ -577,7 +652,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
         
-        // Boss Phase Logic (sin cambios)
+        // Boss/Bonus Logic
         if(inBossPhase){
             if(bossEntranceTimer > 0){
                 bossEntranceTimer -= dt;
@@ -585,8 +660,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                     doShake(0.05); 
                 }
                 if(bossEntranceTimer <= 0){
-                    bossActive = true; 
-                    bossSpawnTimer = 0;
+                    bossEntranceTimer = 0;
                 }
             }
 
@@ -600,7 +674,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // Bonus Phase Logic (sin cambios)
         if(inBonusPhase){
             if(bonusActive){
                 bonusTimer += dt;
@@ -619,17 +692,16 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
 
-        // UI Update (sin cambios)
+        // UI Update
         zenFill.style.width = (CHARGE.value / CHARGE.max) * 100 + "%";
         zenFill.parentElement.classList.toggle('cooldown', CHARGE.cooldown > 0);
         scoreEl.textContent = "Puntos: " + POINTS.total;
     } 
 
-    // ===== GAME LOOP: DRAW (sin cambios) ===== 
+    // ===== GAME LOOP: DRAW ===== 
     function draw(){ 
         ctx.clearRect(0,0,WORLD.w,WORLD.h); 
         
-        // Draw Background 
         if(currentBg && currentBg.complete) {
             ctx.drawImage(currentBg, 0, 0, WORLD.w, WORLD.h);
         } else {
@@ -637,15 +709,12 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             ctx.fillRect(0, 0, WORLD.w, WORLD.h);
         }
         
-        // Fade Overlay on Game Over
         if(gameOver || gameComplete){ ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(0,0,WORLD.w,WORLD.h); } 
 
-        // Draw Clouds
         for(const c of CLOUD.list){
             if(c.imgRef && c.imgRef.complete){ const w = c.imgRef.width * c.scale; const h = c.imgRef.height * c.scale; ctx.drawImage(c.imgRef, c.x - w/2, c.y - h/2, w, h); }
         }
         
-        // Draw Collectables 
         for(const b of bananas){ 
             if(started && !gameOver && Math.random() < 0.3) {
                 spawnSparks(b.x, b.y, 1, '#6ee7b7'); 
@@ -658,19 +727,16 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             if(itemImg && itemImg.complete) ctx.drawImage(itemImg, b.x - b.r, b.y - b.r, b.r*2, b.r*2); 
         } 
         
-        // Draw Obstacles
         for(const o of obstacles){ 
             ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; ctx.beginPath(); ctx.arc(o.x, o.y, o.r + 6, 0, Math.PI * 2); ctx.fill();
             let obsImg = o.imgRef;
             if(obsImg && obsImg.complete) ctx.drawImage(obsImg, o.x - o.r, o.y - o.r, o.r*2, o.r*2); 
         } 
         
-        // Draw Pulses
         for(const p of pulses){
             ctx.strokeStyle = `rgba(134, 239, 172, ${p.life / PULSE.life})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
         }
 
-        // Draw Ground
         const groundH = WORLD.h - GROUND_H;
         if(IMG.suelo && IMG.suelo.complete){
             for(const s of sueloScroll){
@@ -680,7 +746,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
              ctx.fillStyle = '#3a3a44'; ctx.fillRect(0, groundH, WORLD.w, GROUND_H);
         }
         
-        // Draw Player (Erizo)
         let erizoImg = IMG.erizo.calmado; 
         if(player.state === 'inhalando') erizoImg = IMG.erizo.inhalando;
         else if(player.state === 'gritando') erizoImg = IMG.erizo.gritando; 
@@ -689,16 +754,15 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         
         if(erizoImg && erizoImg.complete) ctx.drawImage(erizoImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2); 
         
-        // Draw Boss/Bonus UI 
-        const BOSS_W = WORLD.w * 0.55; 
         const BOSS_H = WORLD.h * 0.75; 
-        const BOSS_X_IDLE = WORLD.w - BOSS_W/2 - 50; 
+        const BOSS_W_DRAW = WORLD.w * 0.8; 
+        const BOSS_X_IDLE = WORLD.w - (BOSS_W_DRAW/2) + 100; 
         const BOSS_Y_IDLE = WORLD.h/2 - BOSS_H/2;
 
         if(inBossPhase){
             const cartelImg = IMG.bossCartels[bossStageIndex] || IMG.bossCartels[1];
+            
             if(bossEntranceTimer > 0 && cartelImg && cartelImg.complete){ 
-                // Dibuja Cartel
                 ctx.drawImage(cartelImg, WORLD.w/2 - 150, WORLD.h/2 - 50, 300, 100); 
             }
             
@@ -710,20 +774,16 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
                     let bossY = BOSS_Y_IDLE;
                     
                     if(bossActive){
-                         // Vaiven (oscilación lateral)
                          const vaiven = Math.sin(Date.now() / 300) * 10;
                          bossX += vaiven;
                     } else {
-                         // Entrada (movimiento desde la derecha)
                          const progress = (2.0 - bossEntranceTimer) / 2.0; 
-                         const startX = WORLD.w + BOSS_W/2;
+                         const startX = WORLD.w + BOSS_W_DRAW/2;
                          bossX = startX + (BOSS_X_IDLE - startX) * Math.min(progress * 1.5, 1.0);
                     }
                     
-                    // Dibuja el boss
-                    ctx.drawImage(bossImg, bossX - BOSS_W/2, bossY, BOSS_W, BOSS_H);
+                    ctx.drawImage(bossImg, bossX - BOSS_W_DRAW/2, bossY, BOSS_W_DRAW, BOSS_H);
                     
-                    // Chispas Rojas 
                     if(bossActive && Math.random() < 0.5) {
                         spawnSparks(bossX, bossY + BOSS_H/2, 1, '#ef4444'); 
                     }
@@ -731,7 +791,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             }
         }
         
-        // Draw Sparks
         for(const s of sparks){
             ctx.fillStyle = s.color;
             ctx.globalAlpha = s.life / s.maxLife; 
@@ -742,7 +801,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     } 
     
-    // ===== GAME LOOP: FRAME (sin cambios) =====
+    // ===== GAME LOOP: FRAME =====
     function frame(now) {
         if (gameOver || gameComplete) return;
         const dt = Math.min((now - lastFrame) / 1000, 1/30); 
@@ -756,7 +815,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         }
     }
 
-    // ===== INIT / START FLOW (sin cambios) =====
+    // ===== INIT / START FLOW =====
     async function loadImage(src){ 
         return new Promise((resolve, reject)=>{ 
             const img = new Image(); 
@@ -786,7 +845,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
 
         for(const s of ASSETS.contador) IMG.contador.push(await loadImage(s)); IMG.contadorGo = await loadImage(ASSETS.contadorGo); 
         
-        // Carga de Bosses 1, 2 y 3
         const bossStages = [ASSETS.boss1, ASSETS.boss2, ASSETS.boss3];
         for(let i=1; i<=3; i++){
             const asset = bossStages[i-1];
@@ -796,7 +854,6 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
             for(const s of asset.lanzas) IMG.bossEspumas[i].push(await loadImage(s));
         }
         
-        // Carga de Patitos
         IMG.bonusBg = await loadImage(ASSETS.bonus.bg); 
         IMG.bonusPatitos.push({img: await loadImage(ASSETS.bonus.patito1.img), points: ASSETS.bonus.patito1.points, kind: ASSETS.bonus.patito1.kind});
         IMG.bonusPatitos.push({img: await loadImage(ASSETS.bonus.patito2.img), points: ASSETS.bonus.patito2.points, kind: ASSETS.bonus.patito2.kind});
@@ -826,6 +883,8 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
     if(musicEnabled) playMusic(MUSIC.menu);
 
     btnStart.addEventListener('click', btnStartHandler); 
+    
+    menuPanel.classList.add('show'); 
 
     const COUNTDOWN_IMAGES = ASSETS.contador.slice();
     function showMainCountdown(onDone){ 
@@ -860,6 +919,7 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         if(isDown){ isDown=false; justReleased=true; e.preventDefault(); } 
     }); 
 
+    // LÓGICA DE REINICIO REVISADA (FIX AL MORIR):
     btnRestart.addEventListener('click', ()=>{
         if(POINTS.total > POINTS.best){ 
             POINTS.best = POINTS.total;
@@ -878,10 +938,40 @@ height: auto;display:block;margin:0 auto;animation:zoomIn .6s ease
         resetVolatileState(); 
         if(musicEnabled) playMusic(MUSIC.base); 
         lastFrame = performance.now();
-        requestAnimationFrame(frame);
+        // Reanudar el bucle del juego.
+        loopId = requestAnimationFrame(frame);
     });
 
-    // Teclas de testeo (sin cambios)
+    window.addEventListener('keydown', (e)=>{ 
+        if(!TEST_MODE) return; 
+        const key = e.key.toLowerCase();
+        
+        // Auto-start game if menu is open
+        if(!started) {
+            if(key === 'j' || key === 'k' || key === 'l' || key === 'b' || key === 'n' || key === 'm' || key === ' ') btnStart.click();
+            return;
+        }
+        if(gameOver) return;
+        
+        // BOSSES
+        if(key === 'j') startBossPhase(1); 
+        else if(key === 'k') startBossPhase(2); 
+        else if(key === 'l') startBossPhase(3); 
+        
+        // BONUS
+        else if(key === 'b') startBonusPhase(); 
+        
+        // CHEATS
+        else if(key === 'n') POINTS.total += 10;
+        else if(key === 'm') POINTS.total = 1000;
+        
+        // QUICK RESTART
+        else if(key === 'r') {
+            resetAll(); 
+            lastFrame = performance.now(); 
+            loopId = requestAnimationFrame(frame); 
+        }
+    });
     
 })();
 </script>
